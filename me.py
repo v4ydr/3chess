@@ -240,7 +240,6 @@ def visualize_graph(G):
     plt.tight_layout()
     plt.show()
 
-
 def create_3chess_graph():
     """Create the complete 3Chess board graph."""
     G = create_nodes()
