@@ -10,7 +10,7 @@ from enum import Enum
 from me import create_3chess_graph, bishop_rays, rook_rays, knight_hops, EdgeType
 import networkx as nx
 
-WIDTH, HEIGHT = 800, 800
+WIDTH, HEIGHT = 900, 900
 
 cos30, sin30 = cos(radians(30)), sin(radians(30))
 cos60, sin60 = cos(radians(60)), sin(radians(60))
@@ -24,8 +24,8 @@ class PieceType(Enum):
     QUEEN = 5
 
 class Player(Enum):
-    RED = 0
-    WHITE = 1
+    WHITE = 0  # Match yalta.py sprite ordering
+    RED = 1
     BLACK = 2
 
 def load_sprites():
@@ -33,7 +33,45 @@ def load_sprites():
     pieces = [[],[],[]]
     for y in range(3):
         for x in range(6):
-            pieces[y].append(pygame.transform.scale(spritesheet.subsurface([x*32, y*32, 32, 32]), [32,32]))
+            # Get and scale the sprite
+            sprite = spritesheet.subsurface([x*32, y*32, 32, 32])
+            scaled = pygame.transform.scale(sprite, [40, 40])
+            
+            # Recolor black pieces (row 2) from brown to true black
+            if y == 2:  # Black pieces row
+                # Create a copy to modify
+                recolored = scaled.copy()
+                # Lock surface for pixel access
+                pix_array = pygame.PixelArray(recolored)
+                
+                # Replace brown-ish colors with black/dark grey
+                # The original sprites use a brown color around (120, 77, 58)
+                for px in range(40):
+                    for py in range(40):
+                        color = recolored.get_at((px, py))
+                        # If it's a brown-ish color (not transparent)
+                        if color.a > 0:  # Not transparent
+                            # Calculate brightness to maintain shading
+                            brightness = (color.r + color.g + color.b) / 3
+                            if brightness < 200:  # Not a highlight
+                                # Map browns to blacks/greys
+                                if brightness < 60:
+                                    # Very dark -> black
+                                    pix_array[px, py] = (10, 10, 10)
+                                elif brightness < 100:
+                                    # Medium dark -> dark grey
+                                    pix_array[px, py] = (30, 30, 30)
+                                elif brightness < 140:
+                                    # Medium -> grey
+                                    pix_array[px, py] = (50, 50, 50)
+                                else:
+                                    # Light areas -> lighter grey
+                                    pix_array[px, py] = (70, 70, 70)
+                
+                del pix_array  # Release the pixel array
+                pieces[y].append(recolored)
+            else:
+                pieces[y].append(scaled)
     return pieces
 
 sprites = load_sprites()
@@ -111,10 +149,11 @@ class Cell:
     ]
     
     pygame.font.init()
-    font = pygame.font.SysFont("monospace", 12)
+    font = pygame.font.SysFont("monospace", 10)
     
-    DARK = (54,39,32)
-    LIGHT = (229,210,170)
+    # Forest green for dark squares, beige for light
+    DARK = (34, 87, 46)  # Forest green
+    LIGHT = (245, 222, 179)  # Beige
     
     def __init__(self, node_name, x, y):
         self.node_name = node_name
@@ -148,29 +187,44 @@ class Cell:
                 self.colour = [self.DARK, self.LIGHT][(x+y+i)%2]
                 break
         
-        self.txt = self.font.render(node_name, True, (0,255,0))
-        self.txt_size = [self.txt.get_width()/2, self.txt.get_height()/2]
+        # Don't show node names by default - too cluttered
+        self.show_label = False
+        if self.show_label:
+            self.txt = self.font.render(node_name, True, (100,100,100))
+            self.txt_size = [self.txt.get_width()/2, self.txt.get_height()/2]
     
     def draw(self, window, piece):
         if self.points:
             colour = self.colour
             
-            if self.selected:
-                colour = (255, 255, 0)  # Yellow for selected
-            elif self.highlighted:
-                colour = (0, 255, 0)  # Green for possible moves
-            elif self.hover:
-                colour = (150, 150, 150)
-            
+            # Draw base square
             pygame.draw.polygon(window, colour, self.points)
+            
+            # Add subtle edge for board definition
+            edge_color = (20, 50, 25) if colour == self.DARK else (200, 180, 140)
+            pygame.draw.polygon(window, edge_color, self.points, 1)
+            
+            # Selection and movement indicators
+            if self.selected:
+                # Golden outline for selected square
+                pygame.draw.polygon(window, (255, 215, 0), self.points, 4)
+            elif self.highlighted:
+                # Small green circle for possible moves
+                pygame.draw.circle(window, (50, 205, 50), (int(self.center.x), int(self.center.y)), 10)
+                pygame.draw.circle(window, (34, 139, 34), (int(self.center.x), int(self.center.y)), 10, 2)
+            elif self.hover:
+                # Subtle white outline on hover
+                pygame.draw.polygon(window, (255, 255, 255), self.points, 2)
             
             if piece:
                 player, piece_type = piece
                 sprite = sprites[player.value][piece_type.value]
-                window.blit(sprite, [self.center.x-16, self.center.y-16])
+                # Center the sprites (40x40 so offset by 20)
+                window.blit(sprite, [self.center.x-20, self.center.y-20])
             
-            # Draw node name for debugging
-            window.blit(self.txt, [self.center.x-self.txt_size[0], self.center.y-self.txt_size[1]])
+            # Only draw node name if enabled
+            if self.show_label and hasattr(self, 'txt'):
+                window.blit(self.txt, [self.center.x-self.txt_size[0], self.center.y-self.txt_size[1]])
     
     def is_in(self, pos):
         if self.points:
@@ -206,7 +260,8 @@ class UnifiedChessGame:
         
         # UI
         pygame.font.init()
-        self.font = pygame.font.SysFont("monospace", 30)
+        self.font = pygame.font.SysFont("Arial", 24, bold=True)
+        self.small_font = pygame.font.SysFont("Arial", 18)
         self.turn_order = [Player.RED, Player.WHITE, Player.BLACK]
         
     def create_node_mapping(self):
@@ -552,11 +607,11 @@ class UnifiedChessGame:
             piece = self.piece_positions.get(node_name)
             cell.draw(window, piece)
         
-        # Draw current player indicator
+        # Draw a cleaner current player indicator
         player_colors = {
             Player.RED: (214, 21, 65),
-            Player.WHITE: (251, 239, 226),
-            Player.BLACK: (120, 77, 58)
+            Player.WHITE: (80, 80, 80),  # Grey for better visibility
+            Player.BLACK: (20, 20, 20)
         }
         player_names = {
             Player.RED: "Red",
@@ -564,15 +619,18 @@ class UnifiedChessGame:
             Player.BLACK: "Black"
         }
         
+        # Draw turn indicator in a subtle box
         color = player_colors[self.current_player]
         name = player_names[self.current_player]
-        txt = self.font.render(f"{name}'s turn", True, color)
-        window.blit(txt, [10, 10])
         
-        # Draw selected piece info
-        if self.selected_node:
-            info_txt = self.font.render(f"Selected: {self.selected_node}", True, (255, 255, 0))
-            window.blit(info_txt, [10, 50])
+        # Create a semi-transparent background box
+        indicator_surface = pygame.Surface((150, 40))
+        indicator_surface.set_alpha(200)
+        indicator_surface.fill((255, 255, 255))
+        window.blit(indicator_surface, (20, 20))
+        
+        txt = self.font.render(f"{name} to move", True, color)
+        window.blit(txt, [30, 25])
 
 def main():
     pygame.init()
@@ -590,9 +648,10 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
         
-        pygame.display.set_caption(f"3Chess - {clock.get_fps():.2f} FPS")
+        pygame.display.set_caption("3Chess")
         
-        window.fill(0)
+        # Use a dark background that complements the green/beige board
+        window.fill((25, 25, 25))  # Dark grey
         game.update(events, mouse_pos)
         game.draw(window)
         
