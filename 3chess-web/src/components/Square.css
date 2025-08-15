@@ -1,0 +1,71 @@
+.square {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(
+    30% 0%,
+    70% 0%,
+    100% 50%,
+    70% 100%,
+    30% 100%,
+    0% 50%
+  );
+  transform: rotate(-30deg); /* Counter-rotate to keep pieces upright */
+}
+
+.square.dark {
+  background-color: #22572e; /* Forest green */
+}
+
+.square.light {
+  background-color: #f5deb3; /* Beige */
+}
+
+.square:hover {
+  filter: brightness(1.1);
+  transform: rotate(-30deg) scale(1.05);
+}
+
+.square.selected {
+  box-shadow: inset 0 0 0 4px #ffd700;
+  animation: pulse 1s infinite;
+}
+
+.square.possible-move::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background-color: rgba(50, 205, 50, 0.8);
+  border-radius: 50%;
+  border: 2px solid #228b22;
+  z-index: 1;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: inset 0 0 0 4px #ffd700;
+  }
+  50% {
+    box-shadow: inset 0 0 0 6px #ffed4e;
+  }
+  100% {
+    box-shadow: inset 0 0 0 4px #ffd700;
+  }
+}
+
+.move-indicator {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background-color: rgba(50, 205, 50, 0.8);
+  border-radius: 50%;
+  border: 2px solid #228b22;
+  z-index: 1;
+  pointer-events: none;
+}

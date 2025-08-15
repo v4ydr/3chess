@@ -1,0 +1,101 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #191919;
+  color: #fff;
+  overflow: hidden;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-container {
+  display: flex;
+  gap: 0;
+  width: 100%;
+  max-width: 1400px;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 500px;
+  background: #252525;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-left: 1px solid #333;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar h2 {
+  font-size: 2.5rem;
+  color: #ffd700;
+  text-align: center;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.turn-indicator {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.turn-indicator h3 {
+  font-size: 1rem;
+  color: #999;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.current-player {
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.game-stats {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.game-stats h3 {
+  font-size: 1rem;
+  color: #999;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-item span:first-child {
+  color: #999;
+}
+
+.stat-item span:last-child {
+  color: #fff;
+  font-weight: bold;
+}

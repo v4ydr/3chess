@@ -1,0 +1,15 @@
+.board-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+  padding: 20px;
+}
+
+.board {
+  position: relative;
+  width: 900px;
+  height: 900px;
+  transform: rotate(30deg); /* Rotate to align hexagon properly */
+}
