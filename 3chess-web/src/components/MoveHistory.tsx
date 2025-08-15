@@ -5,9 +5,10 @@ import './MoveHistory.css';
 
 interface MoveHistoryProps {
   moves: Move[];
+  currentPlayer: Player;
 }
 
-const MoveHistory: React.FC<MoveHistoryProps> = ({ moves }) => {
+const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentPlayer }) => {
   const getPieceSymbol = (type: PieceType): string => {
     switch (type) {
       case PieceType.KING: return '♚';
@@ -69,9 +70,12 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ moves }) => {
     <div className="move-history">
       <h3>Move History</h3>
       <div className="move-history-header">
-        <div className="header-cell" style={{ color: getPlayerColor(Player.RED) }}>♚</div>
-        <div className="header-cell" style={{ color: getPlayerColor(Player.WHITE) }}>♚</div>
-        <div className="header-cell" style={{ color: getPlayerColor(Player.BLACK) }}>♚</div>
+        <div className={`header-cell ${currentPlayer === Player.RED ? 'active-player' : ''}`} 
+             style={{ color: getPlayerColor(Player.RED) }}>♚</div>
+        <div className={`header-cell ${currentPlayer === Player.WHITE ? 'active-player' : ''}`}
+             style={{ color: getPlayerColor(Player.WHITE) }}>♚</div>
+        <div className={`header-cell ${currentPlayer === Player.BLACK ? 'active-player' : ''}`}
+             style={{ color: getPlayerColor(Player.BLACK) }}>♚</div>
       </div>
       <div className="move-history-scroll">
         {groupedMoves.map((group, index) => (

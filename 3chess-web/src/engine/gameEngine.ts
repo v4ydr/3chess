@@ -84,11 +84,13 @@ export class GameEngine {
   
   selectNode(node: string): void {
     const piece = this.state.pieces.get(node);
+    const selectedPiece = this.state.selectedNode ? this.state.pieces.get(this.state.selectedNode) : null;
     
     if (!piece) {
       // Empty square clicked
-      if (this.state.selectedNode && this.state.possibleMoves.includes(node)) {
-        // Move piece here
+      if (this.state.selectedNode && this.state.possibleMoves.includes(node) && 
+          selectedPiece?.player === this.state.currentPlayer) {
+        // Move piece here (only if it's the current player's piece)
         this.movePiece(this.state.selectedNode, node);
       } else {
         // Deselect
@@ -99,8 +101,9 @@ export class GameEngine {
       // Select this piece
       this.state.selectedNode = node;
       this.state.possibleMoves = this.getValidMoves(node);
-    } else if (this.state.selectedNode && this.state.possibleMoves.includes(node)) {
-      // Capture enemy piece
+    } else if (this.state.selectedNode && this.state.possibleMoves.includes(node) && 
+               selectedPiece?.player === this.state.currentPlayer) {
+      // Capture enemy piece (only if it's the current player's piece)
       this.movePiece(this.state.selectedNode, node);
     } else {
       // Clicked on non-turn piece - show its moves in gray (preview mode)

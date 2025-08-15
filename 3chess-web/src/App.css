@@ -46,26 +46,6 @@ body {
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.turn-indicator {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.turn-indicator h3 {
-  font-size: 1rem;
-  color: #999;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.current-player {
-  font-size: 2rem;
-  font-weight: bold;
-  text-align: center;
-}
-
 .game-stats {
   background: rgba(255, 255, 255, 0.05);
   padding: 20px;

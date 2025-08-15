@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Piece } from '../types/game';
 import { Cell } from '../utils/hexMath';
 import { Player, PieceType } from '../types/game';
@@ -11,6 +11,7 @@ interface HexSquareProps {
   isPossibleMove: boolean;
   isGrayMove?: boolean;  // For showing moves when not player's turn
   onClick: () => void;
+  onMouseDown?: (e: React.MouseEvent) => void;
 }
 
 // Filled/solid Unicode pieces
@@ -31,19 +32,31 @@ const HexSquare: React.FC<HexSquareProps> = ({
   isPossibleMove,
   isGrayMove,
   onClick,
+  onMouseDown,
 }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  
   // EXACT colors from unified_chess.py
-  const darkColor = '#22572E';  // Forest green
+  const darkColor = '#2E8B57';  // Sea green
   const lightColor = '#F5DEB3'; // Beige
   
   const fillColor = cell.isDark ? darkColor : lightColor;
-  const edgeColor = cell.isDark ? '#143219' : '#C8B88B';
+  const edgeColor = cell.isDark ? '#14321900' : '#C8B88B00';
   
   // Create polygon points string
   const pointsStr = cell.points.map(p => `${p[0]},${p[1]}`).join(' ');
   
+  // Determine cursor style
+  const cursorStyle = piece ? 'pointer' : 'default';
+  
   return (
-    <g onClick={onClick} style={{ cursor: 'pointer' }}>
+    <g 
+      onClick={onClick}
+      onMouseDown={onMouseDown}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ cursor: cursorStyle }}
+    >
       {/* Base square */}
       <polygon
         points={pointsStr}
@@ -74,15 +87,20 @@ const HexSquare: React.FC<HexSquareProps> = ({
         />
       )}
       
-      {/* Square name with low opacity */}
+      {/* Square name with hover effect */}
       <text
         x={cell.center.x}
         y={cell.center.y + 5}
-        fontSize="14"
-        fill="#888"
-        opacity="0.3"
+        fontSize="18"
+        fontWeight="bold"
+        fill="#666"
+        opacity={isHovered ? "0.8" : "0.2"}
         textAnchor="middle"
-        style={{ userSelect: 'none', pointerEvents: 'none' }}
+        style={{ 
+          userSelect: 'none', 
+          pointerEvents: 'none',
+          transition: 'opacity 0.2s ease'
+        }}
       >
         {node}
       </text>

@@ -48,17 +48,8 @@ function App() {
           onSquareClick={handleSquareClick}
         />
         <div className="sidebar">
-          <h2>3Chess</h2>
-          <div className="turn-indicator">
-            <h3>Current Turn</h3>
-            <div 
-              className="current-player"
-              style={{ color: getPlayerColor(gameState.currentPlayer) }}
-            >
-              {getPlayerName(gameState.currentPlayer)}
-            </div>
-          </div>
-          <MoveHistory moves={gameState.moveHistory} />
+          <h2>CH3SS</h2>
+          <MoveHistory moves={gameState.moveHistory} currentPlayer={gameState.currentPlayer} />
         </div>
       </div>
     </div>
