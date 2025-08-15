@@ -85,7 +85,10 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentPlayer }) => {
               <div className="move-cell">
                 {group[0] && (
                   <span className="move-text">
-                    <span className="piece-icon" style={{ color: getPlayerColor(Player.RED) }}>
+                    <span className="piece-icon" style={{ 
+                      color: getPlayerColor(Player.RED),
+                      WebkitTextStrokeColor: '#808080'
+                    }}>
                       {getPieceSymbol(group[0].piece)}
                     </span>
                     <span className="move-notation">
@@ -97,7 +100,10 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentPlayer }) => {
               <div className="move-cell">
                 {group[1] && (
                   <span className="move-text">
-                    <span className="piece-icon" style={{ color: getPlayerColor(Player.WHITE) }}>
+                    <span className="piece-icon" style={{ 
+                      color: getPlayerColor(Player.WHITE),
+                      WebkitTextStrokeColor: '#000000'
+                    }}>
                       {getPieceSymbol(group[1].piece)}
                     </span>
                     <span className="move-notation">
@@ -109,7 +115,10 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentPlayer }) => {
               <div className="move-cell">
                 {group[2] && (
                   <span className="move-text">
-                    <span className="piece-icon" style={{ color: getPlayerColor(Player.BLACK) }}>
+                    <span className="piece-icon" style={{ 
+                      color: getPlayerColor(Player.BLACK),
+                      WebkitTextStrokeColor: '#FFFFFF'
+                    }}>
                       {getPieceSymbol(group[2].piece)}
                     </span>
                     <span className="move-notation">

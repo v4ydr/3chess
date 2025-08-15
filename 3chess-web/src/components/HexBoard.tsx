@@ -28,6 +28,12 @@ const DraggedPiece: React.FC<{ piece: Piece; x: number; y: number }> = ({ piece,
       piece.player === Player.WHITE ? '#F0F0F0' :
       '#0A0A0A'
     }
+    stroke={
+      piece.player === Player.RED ? '#808080' :
+      piece.player === Player.WHITE ? '#000000' :
+      '#FFFFFF'
+    }
+    strokeWidth="1"
     style={{ 
       userSelect: 'none', 
       pointerEvents: 'none',
@@ -67,8 +73,18 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
     const piece = state.pieces.get(node);
     if (piece && piece.player === state.currentPlayer) {
       event.preventDefault();
-      setDraggedNode(node);
-      onSquareClick(node); // Select the piece
+      
+      // Get initial mouse position
+      if (svgRef.current) {
+        const rect = svgRef.current.getBoundingClientRect();
+        const initialX = ((event.clientX - rect.left) / rect.width) * 900;
+        const initialY = ((event.clientY - rect.top) / rect.height) * 900;
+        
+        // Set initial drag position to current mouse position
+        setDragPosition({ x: initialX, y: initialY });
+        setDraggedNode(node);
+        onSquareClick(node); // Select the piece
+      }
       
       // Track mouse position for dragging
       const handleMouseMove = (e: MouseEvent) => {
@@ -81,19 +97,19 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
       };
       
       const handleMouseUp = (e: MouseEvent) => {
-        if (svgRef.current && draggedNode) {
+        if (svgRef.current) {
           const rect = svgRef.current.getBoundingClientRect();
           const x = ((e.clientX - rect.left) / rect.width) * 900;
           const y = ((e.clientY - rect.top) / rect.height) * 900;
           
           // Find which square was dropped on
-          for (const [node, cell] of cells.entries()) {
+          for (const [dropNode, cell] of cells.entries()) {
             const dist = Math.sqrt(
               Math.pow(cell.center.x - x, 2) + 
               Math.pow(cell.center.y - y, 2)
             );
             if (dist < 30) { // Within reasonable distance of center
-              onSquareClick(node);
+              onSquareClick(dropNode);
               break;
             }
           }
@@ -130,6 +146,7 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
           const isPossibleMove = state.possibleMoves.includes(node) && isCurrentPlayerPiece;
           const isGrayMove = state.possibleMoves.includes(node) && !isCurrentPlayerPiece;
           const isDragging = draggedNode === node;
+          const isLastMoveSquare = node === state.lastMoveFrom || node === state.lastMoveTo;
           
           return (
             <HexSquare
@@ -140,6 +157,7 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
               isSelected={isSelected}
               isPossibleMove={isPossibleMove}
               isGrayMove={isGrayMove}
+              isLastMove={isLastMoveSquare}
               onClick={() => onSquareClick(node)}
               onMouseDown={(e) => handleDragStart(node, e)}
             />

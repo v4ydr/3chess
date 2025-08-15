@@ -10,6 +10,7 @@ interface HexSquareProps {
   isSelected: boolean;
   isPossibleMove: boolean;
   isGrayMove?: boolean;  // For showing moves when not player's turn
+  isLastMove?: boolean;  // For highlighting last move
   onClick: () => void;
   onMouseDown?: (e: React.MouseEvent) => void;
 }
@@ -31,6 +32,7 @@ const HexSquare: React.FC<HexSquareProps> = ({
   isSelected,
   isPossibleMove,
   isGrayMove,
+  isLastMove,
   onClick,
   onMouseDown,
 }) => {
@@ -65,25 +67,13 @@ const HexSquare: React.FC<HexSquareProps> = ({
         strokeWidth="1"
       />
       
-      {/* Selection indicator */}
-      {isSelected && (
+      {/* Highlight overlay for selection or last move */}
+      {(isSelected || isLastMove) && (
         <polygon
           points={pointsStr}
-          fill="none"
-          stroke="#FFD700"
-          strokeWidth="4"
-        />
-      )}
-      
-      {/* Possible move indicator (green for valid turn, gray for preview) */}
-      {(isPossibleMove || isGrayMove) && (
-        <circle
-          cx={cell.center.x}
-          cy={cell.center.y}
-          r="10"
-          fill={isGrayMove ? "rgba(150, 150, 150, 0.5)" : "rgba(50, 205, 50, 0.8)"}
-          stroke={isGrayMove ? "#666" : "#228B22"}
-          strokeWidth="2"
+          fill="#FFFF00"
+          fillOpacity={"0.4"}
+          stroke="none"
         />
       )}
       
@@ -118,10 +108,64 @@ const HexSquare: React.FC<HexSquareProps> = ({
             piece.player === Player.WHITE ? '#F0F0F0' :
             '#0A0A0A'
           }
+          stroke={
+            piece.player === Player.RED ? '#808080' :
+            piece.player === Player.WHITE ? '#000000' :
+            '#FFFFFF'
+          }
+          strokeWidth="1"
           style={{ userSelect: 'none' }}
         >
           {pieceSymbols[piece.type]}
         </text>
+      )}
+      
+      {/* Possible move indicator (gray circle/dot for valid moves) - rendered OVER pieces */}
+      {isPossibleMove && (
+        piece ? (
+          // Ring for captures
+          <circle
+            cx={cell.center.x}
+            cy={cell.center.y}
+            r="28"
+            fill="none"
+            stroke="rgba(180, 180, 180, 0.5)"
+            strokeWidth="5"
+          />
+        ) : (
+          // Small filled circle for empty squares
+          <circle
+            cx={cell.center.x}
+            cy={cell.center.y}
+            r="12"
+            fill="rgba(180, 180, 180, 0.5)"
+            stroke="none"
+          />
+        )
+      )}
+      
+      {/* Preview move indicator (X for non-turn pieces) - rendered OVER pieces */}
+      {isGrayMove && (
+        <g>
+          <line
+            x1={cell.center.x - (piece ? 15 : 8)}
+            y1={cell.center.y - (piece ? 15 : 8)}
+            x2={cell.center.x + (piece ? 15 : 8)}
+            y2={cell.center.y + (piece ? 15 : 8)}
+            stroke="rgba(150, 150, 150, 0.5)"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+          <line
+            x1={cell.center.x - (piece ? 15 : 8)}
+            y1={cell.center.y + (piece ? 15 : 8)}
+            x2={cell.center.x + (piece ? 15 : 8)}
+            y2={cell.center.y - (piece ? 15 : 8)}
+            stroke="rgba(150, 150, 150, 0.5)"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+        </g>
       )}
     </g>
   );

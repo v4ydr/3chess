@@ -38,6 +38,8 @@ export interface BoardState {
   selectedNode: string | null;
   possibleMoves: string[];
   moveHistory: Move[];
+  lastMoveFrom: string | null;
+  lastMoveTo: string | null;
 }
 
 export enum EdgeType {

@@ -120,6 +120,7 @@
 .piece-icon {
   font-size: 1.8rem;
   line-height: 1;
+  -webkit-text-stroke: 0.5px;
 }
 
 .move-notation {

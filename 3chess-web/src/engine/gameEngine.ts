@@ -74,7 +74,9 @@ export class GameEngine {
       currentPlayer: Player.RED,
       selectedNode: null,
       possibleMoves: [],
-      moveHistory: []
+      moveHistory: [],
+      lastMoveFrom: null,
+      lastMoveTo: null
     };
   }
   
@@ -148,6 +150,10 @@ export class GameEngine {
       captured: capturedPiece || undefined
     };
     this.state.moveHistory.push(move);
+    
+    // Track last move for highlighting
+    this.state.lastMoveFrom = from;
+    this.state.lastMoveTo = to;
     
     // Move piece
     this.state.pieces.delete(from);
