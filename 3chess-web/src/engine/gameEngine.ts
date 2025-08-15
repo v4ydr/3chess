@@ -240,15 +240,22 @@ export class GameEngine {
         }
       } else if (player === Player.WHITE) {
         // White moves in middle section and transitions
-        // From 8→7→6→5 then 5→9 for I,J,K,L files
+        // From 8→7→6→5 then 5→9 for I,J,K,L files or 5→4 for A,B,C,D,E,F,G,H files
         if (rank === 5 && 'IJKL'.includes(file)) {
           if (neighborRank === 9) {
             forwardSquare = neighbor;
           }
-        } else if (rank >= 5 && rank <= 8 && neighborRank === rank - 1) {
+        } else if (rank === 5 && 'ABCDEFGH'.includes(file)) {
+          if (neighborRank === 4) {
+            forwardSquare = neighbor;
+          }
+        } else if (rank >= 6 && rank <= 8 && neighborRank === rank - 1) {
           forwardSquare = neighbor;
         } else if (rank >= 9 && neighborRank === rank + 1) {
           // White can also move up once in the top section
+          forwardSquare = neighbor;
+        } else if (rank >= 2 && rank <= 4 && neighborRank === rank - 1) {
+          // White continues moving down in the bottom section (ranks 4→3→2→1)
           forwardSquare = neighbor;
         }
       } else if (player === Player.BLACK) {
@@ -360,7 +367,7 @@ export class GameEngine {
         } else if (rank >= 9) {
           // In top section: moving up
           isForwardDiagonal = neighborRank === rank + 1;
-        } else if (rank <= 4) {
+        } else if (rank >= 2 && rank <= 4) {
           // In bottom section: moving down
           isForwardDiagonal = neighborRank === rank - 1;
         }
