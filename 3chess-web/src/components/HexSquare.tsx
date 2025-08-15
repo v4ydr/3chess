@@ -39,8 +39,8 @@ const HexSquare: React.FC<HexSquareProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   
   // EXACT colors from unified_chess.py
-  const darkColor = '#2E8B57';  // Sea green
-  const lightColor = '#F5DEB3'; // Beige
+  const darkColor = '#769656';  // Forest green
+  const lightColor = '#EEEED2'; // Beige
   
   const fillColor = cell.isDark ? darkColor : lightColor;
   const edgeColor = cell.isDark ? '#14321900' : '#C8B88B00';

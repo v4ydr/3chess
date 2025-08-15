@@ -194,42 +194,202 @@ export class GameEngine {
   
   private getPawnMoves(node: string, player: Player): string[] {
     const moves: string[] = [];
-    const fileNeighbors = this.graph.getNeighbors(node, 'file' as any);
+    const rank = parseInt(node.slice(1));
     
-    // Determine pawn direction based on player
+    // Get forward moves along the file
+    const forwardMoves = this.getPawnForwardMoves(node, player);
+    moves.push(...forwardMoves);
+    
+    // Get diagonal captures
+    const captures = this.getPawnCaptures(node, player);
+    moves.push(...captures);
+    
+    return moves;
+  }
+  
+  private getPawnForwardMoves(node: string, player: Player): string[] {
+    const moves: string[] = [];
+    const fileNeighbors = this.graph.getNeighbors(node, 'file' as any);
     const file = node[0];
     const rank = parseInt(node.slice(1));
+    
+    // Check if pawn is in starting position
+    const isStartingPosition = (
+      (player === Player.RED && rank === 2) ||
+      (player === Player.WHITE && rank === 7) ||
+      (player === Player.BLACK && rank === 11)
+    );
+    
+    // Determine forward direction based on player and position
+    let forwardSquare: string | null = null;
     
     for (const neighbor of fileNeighbors) {
       const neighborRank = parseInt(neighbor.slice(1));
       
       if (player === Player.RED) {
-        // Red moves up (increasing rank or crossing sections)
-        if (neighborRank > rank || (rank === 4 && (neighborRank === 5 || neighborRank === 9))) {
-          if (!this.state.pieces.has(neighbor)) {
-            moves.push(neighbor);
+        // Red moves "up" - generally increasing rank
+        // Special case: from rank 4, can go to 5 (for A,B,C,D files) or 9 (for E,F,G,H,I,J,K,L files)
+        if (rank === 4) {
+          if ('ABCD'.includes(file) && neighborRank === 5) {
+            forwardSquare = neighbor;
+          } else if ('EFGHIJKL'.includes(file) && neighborRank === 9) {
+            forwardSquare = neighbor;
           }
+        } else if (neighborRank === rank + 1) {
+          forwardSquare = neighbor;
         }
       } else if (player === Player.WHITE) {
-        // White moves from middle section
-        if ((rank >= 5 && rank <= 8 && neighborRank < rank) || (rank === 5 && neighborRank === 9)) {
-          if (!this.state.pieces.has(neighbor)) {
-            moves.push(neighbor);
+        // White moves in middle section and transitions
+        // From 8→7→6→5 then 5→9 for I,J,K,L files
+        if (rank === 5 && 'IJKL'.includes(file)) {
+          if (neighborRank === 9) {
+            forwardSquare = neighbor;
           }
+        } else if (rank >= 5 && rank <= 8 && neighborRank === rank - 1) {
+          forwardSquare = neighbor;
+        } else if (rank >= 9 && neighborRank === rank + 1) {
+          // White can also move up once in the top section
+          forwardSquare = neighbor;
         }
       } else if (player === Player.BLACK) {
-        // Black moves down
-        if (neighborRank < rank || (rank === 9 && (neighborRank === 5 || neighborRank === 4))) {
-          if (!this.state.pieces.has(neighbor)) {
-            moves.push(neighbor);
+        // Black moves "down" but direction changes after transition
+        // From 12→11→10→9, then 9→5 (or 9→4), then continues 5→6→7→8 (or 4→3→2→1)
+        if (rank === 9) {
+          // At rank 9, transition to 5 for IJKL files, or 4 for EFGH files
+          if ('IJKL'.includes(file) && neighborRank === 5) {
+            forwardSquare = neighbor;
+          } else if ('EFGH'.includes(file) && neighborRank === 4) {
+            forwardSquare = neighbor;
+          }
+        } else if (rank > 9) {
+          // Before transition: moving down (decreasing rank)
+          if (neighborRank === rank - 1) {
+            forwardSquare = neighbor;
+          }
+        } else if (rank >= 5 && rank <= 8) {
+          // After transition in middle section (IJKL files): now moving up (increasing rank)
+          if ('IJKL'.includes(file) && neighborRank === rank + 1) {
+            forwardSquare = neighbor;
+          }
+        } else if (rank < 5) {
+          // In bottom section (EFGH files after transition): moving down (decreasing rank)
+          if (neighborRank === rank - 1) {
+            forwardSquare = neighbor;
           }
         }
       }
     }
     
-    // TODO: Add pawn captures (diagonal moves to capture)
+    // Add one square forward if not blocked
+    if (forwardSquare && !this.state.pieces.has(forwardSquare)) {
+      moves.push(forwardSquare);
+      
+      // Check two squares forward from starting position
+      if (isStartingPosition) {
+        const nextFileNeighbors = this.graph.getNeighbors(forwardSquare, 'file' as any);
+        const forwardRank = parseInt(forwardSquare.slice(1));
+        
+        for (const neighbor of nextFileNeighbors) {
+          const neighborRank = parseInt(neighbor.slice(1));
+          
+          if (player === Player.RED) {
+            if (forwardRank === 3 && neighborRank === 4) {
+              if (!this.state.pieces.has(neighbor)) {
+                moves.push(neighbor);
+              }
+            }
+          } else if (player === Player.WHITE) {
+            if (forwardRank === 6 && neighborRank === 5) {
+              if (!this.state.pieces.has(neighbor)) {
+                moves.push(neighbor);
+              }
+            }
+          } else if (player === Player.BLACK) {
+            if (forwardRank === 10 && neighborRank === 9) {
+              if (!this.state.pieces.has(neighbor)) {
+                moves.push(neighbor);
+              }
+            }
+          }
+        }
+      }
+    }
     
     return moves;
+  }
+  
+  private getPawnCaptures(node: string, player: Player): string[] {
+    const captures: string[] = [];
+    const diagonalNeighbors = this.graph.getNeighbors(node, 'diagonal' as any);
+    const file = node[0];
+    const rank = parseInt(node.slice(1));
+    
+    for (const neighbor of diagonalNeighbors) {
+      const neighborFile = neighbor[0];
+      const neighborRank = parseInt(neighbor.slice(1));
+      const piece = this.state.pieces.get(neighbor);
+      
+      // Check if it's a forward diagonal based on player
+      // Use the same logic as forward moves to determine if it's in the right direction
+      let isForwardDiagonal = false;
+      
+      if (player === Player.RED) {
+        // Red captures diagonally "upward"
+        if (rank < 4) {
+          // Normal progression: next rank up
+          isForwardDiagonal = neighborRank === rank + 1;
+        } else if (rank === 4) {
+          // Transition: can capture into rank 5 or rank 9
+          isForwardDiagonal = neighborRank === 5 || neighborRank === 9;
+        } else if (rank >= 9) {
+          // In top section: continue upward
+          isForwardDiagonal = neighborRank === rank + 1;
+        }
+      } else if (player === Player.WHITE) {
+        // White captures diagonally in its direction
+        if (rank >= 6 && rank <= 8) {
+          // Moving down in middle section
+          isForwardDiagonal = neighborRank === rank - 1;
+        } else if (rank === 5) {
+          // At transition: can go to 4 (for ABCD/EFGH) or 9 (for IJKL)
+          if ('IJKL'.includes(file) && 'IJKL'.includes(neighborFile)) {
+            isForwardDiagonal = neighborRank === 9;
+          } else {
+            isForwardDiagonal = neighborRank === 4;
+          }
+        } else if (rank >= 9) {
+          // In top section: moving up
+          isForwardDiagonal = neighborRank === rank + 1;
+        } else if (rank <= 4) {
+          // In bottom section: moving down
+          isForwardDiagonal = neighborRank === rank - 1;
+        }
+      } else if (player === Player.BLACK) {
+        // Black captures diagonally in its forward direction
+        if (rank > 9) {
+          // Moving down from top
+          isForwardDiagonal = neighborRank === rank - 1;
+        } else if (rank === 9) {
+          // At transition: can go to 5 (for IJKL) or 4 (for EFGH)
+          isForwardDiagonal = neighborRank === 5 || neighborRank === 4;
+        } else if (rank >= 5 && rank <= 8) {
+          // In middle section after transition (IJKL files): moving up
+          if ('IJKL'.includes(file)) {
+            isForwardDiagonal = neighborRank === rank + 1;
+          }
+        } else if (rank < 5) {
+          // In bottom section (EFGH files): moving down
+          isForwardDiagonal = neighborRank === rank - 1;
+        }
+      }
+      
+      // Can only capture enemy pieces
+      if (isForwardDiagonal && piece && piece.player !== player) {
+        captures.push(neighbor);
+      }
+    }
+    
+    return captures;
   }
   
   private getRookMoves(node: string, player: Player): string[] {
