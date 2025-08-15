@@ -1,6 +1,7 @@
 import networkx as nx
 from enum import Enum
 import matplotlib.pyplot as plt
+from rays import ray_dict
 
 class EdgeType(Enum):
     RANK = 1
@@ -188,7 +189,77 @@ def create_positions(G, layout_choice):
         title = "3Chess Board Graph Visualization (Grid Layout)"
     
     return pos, title
+def on_click(event, G, pos, ax):
+    """Handle click events on nodes."""
+    if event.inaxes != ax:
+        return
+    
+    # Find the closest node to the click
+    click_pos = (event.xdata, event.ydata)
+    min_dist = float('inf')
+    closest_node = None
+    
+    for node, node_pos in pos.items():
+        dist = ((click_pos[0] - node_pos[0])**2 + (click_pos[1] - node_pos[1])**2)**0.5
+        if dist < min_dist:
+            min_dist = dist
+            closest_node = node
+    
+    # Only proceed if click is close enough to a node (within reasonable distance)
+    if min_dist > 0.5:  # Adjust this threshold as needed
+        return
+    
+    # Clear the axes and redraw
+    ax.clear()
+    
+    # Get base node colors
+    node_color_map = color_nodes(G)
+    
+    # Create color list for nodes
+    node_colors = []
+    highlighted_nodes = set()
+    
+    # Get bishop rays for the clicked node
+    if closest_node in ray_dict:
+        for ray in ray_dict[closest_node]:
+            highlighted_nodes.update(ray)
+    
+    for node in G.nodes():
+        if node == closest_node:
+            node_colors.append('red')  # Clicked node is red
+        elif node in highlighted_nodes:
+            node_colors.append('green')  # Nodes in bishop rays are green
+        elif node_color_map[node] == 'dark':
+            node_colors.append('brown')  # Original dark nodes
+        else:
+            node_colors.append('beige')  # Original light nodes
 
+    # Draw nodes with the appropriate colors and black edge color for stroke
+    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=300, edgecolors='black', linewidths=1, ax=ax)
+
+    # Separate edges by type and draw with different colors
+    edges_rank = [(u, v) for u, v, d in G.edges(data=True) if d.get('edge_type') == EdgeType.RANK.value]
+    edges_file = [(u, v) for u, v, d in G.edges(data=True) if d.get('edge_type') == EdgeType.FILE.value]
+    edges_diag = [(u, v) for u, v, d in G.edges(data=True) if d.get('edge_type') == EdgeType.DIAG.value]
+
+    # Draw rank edges in red
+    nx.draw_networkx_edges(G, pos, edgelist=edges_rank, edge_color='red', width=1, ax=ax)
+
+    # Draw file edges in blue
+    nx.draw_networkx_edges(G, pos, edgelist=edges_file, edge_color='blue', width=1, ax=ax)
+
+    # Draw diagonal edges in green
+    nx.draw_networkx_edges(G, pos, edgelist=edges_diag, edge_color='green', width=1, ax=ax)
+
+    # Draw labels
+    nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold', ax=ax)
+
+    ax.set_title(f"3Chess Board - Clicked: {closest_node}")
+    ax.grid(True, alpha=0.3)
+    ax.set_aspect('equal')
+    
+    # Redraw the canvas
+    ax.figure.canvas.draw()
 def visualize_graph(G):
     """Visualize the graph with user-selected layout."""
     # Ask user for layout preference
@@ -209,10 +280,10 @@ def visualize_graph(G):
             node_colors.append('beige')  # Beige for light nodes
 
     # Create the plot
-    plt.figure(figsize=(12, 8))
+    fig, ax = plt.subplots(figsize=(12, 8))
 
     # Draw nodes with the appropriate colors and black edge color for stroke
-    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=300, edgecolors='black', linewidths=1)
+    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=300, edgecolors='black', linewidths=1, ax=ax)
 
     # Separate edges by type and draw with different colors
     edges_rank = [(u, v) for u, v, d in G.edges(data=True) if d.get('edge_type') == EdgeType.RANK.value]
@@ -220,26 +291,29 @@ def visualize_graph(G):
     edges_diag = [(u, v) for u, v, d in G.edges(data=True) if d.get('edge_type') == EdgeType.DIAG.value]
 
     # Draw rank edges in red
-    nx.draw_networkx_edges(G, pos, edgelist=edges_rank, edge_color='red', width=1)
+    nx.draw_networkx_edges(G, pos, edgelist=edges_rank, edge_color='red', width=1, ax=ax)
 
     # Draw file edges in blue
-    nx.draw_networkx_edges(G, pos, edgelist=edges_file, edge_color='blue', width=1)
+    nx.draw_networkx_edges(G, pos, edgelist=edges_file, edge_color='blue', width=1, ax=ax)
 
     # Draw diagonal edges in green
-    nx.draw_networkx_edges(G, pos, edgelist=edges_diag, edge_color='green', width=1)
+    nx.draw_networkx_edges(G, pos, edgelist=edges_diag, edge_color='green', width=1, ax=ax)
 
     # Draw labels
-    nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold')
+    nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold', ax=ax)
 
-    plt.title(title)
+    ax.set_title(title)
     if layout_choice != "2":
-        plt.xlabel("Files (A-L)")
-        plt.ylabel("Ranks (1-12)")
-    plt.grid(True, alpha=0.3)
-    plt.axis('equal')
+        ax.set_xlabel("Files (A-L)")
+        ax.set_ylabel("Ranks (1-12)")
+    ax.grid(True, alpha=0.3)
+    ax.set_aspect('equal')
+    
+    # Connect the click event
+    fig.canvas.mpl_connect('button_press_event', lambda event: on_click(event, G, pos, ax))
+    
     plt.tight_layout()
     plt.show()
-
 def create_3chess_graph():
     """Create the complete 3Chess board graph."""
     G = create_nodes()
@@ -301,7 +375,6 @@ def create_diagonal_edges(G):
                     if edge_tuple not in diagonal_edges:
                         G.add_edge(node, rank_neighbor, edge_type=EdgeType.DIAG.value)
                         diagonal_edges.add(edge_tuple)
-
 def color_nodes(G):
     """Color nodes based on diagonal reachability from A1.
     Nodes reachable from A1 using only diagonal edges are 'dark'.
