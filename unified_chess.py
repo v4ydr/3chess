@@ -231,14 +231,15 @@ class UnifiedChessGame:
                 y = rank - 1  # 0-3
                 mapping[f"{file}{rank}"] = (x, y)
         
-        # Sextant 2 (left): A-D ranks 5-8 - ROTATE 90° COUNTERCLOCKWISE
+        # Sextant 2 (left): A-D ranks 5-8 - NEEDS 180° MORE ROTATION
         # Left edge continuation: A5, A6, A7, A8 (bottom to top)
         for file_idx, file in enumerate("ABCD"):
             for rank in range(5, 9):
-                # Original: (file_idx, rank-5) in 4x4 grid
-                # Rotate 90° CCW: (rank-5, 3-file_idx)
-                x = rank - 5  # 0-3
-                y = 3 - file_idx + 4  # 4-7
+                # Was doing 90° CCW, but need to rotate 180° more
+                # Original 90° CCW gave: (rank-5, 3-file_idx)
+                # Rotate 180° more: (3-(rank-5), file_idx)
+                x = 3 - (rank - 5)  # 3-0 = 3,2,1,0
+                y = file_idx + 4  # 4-7
                 mapping[f"{file}{rank}"] = (x, y)
         
         # Sextant 3 (top-left): I-L ranks 5-8 - ROTATE 180°
@@ -272,15 +273,15 @@ class UnifiedChessGame:
                 y = 3 - (rank - 9) + 8  # 8-11
                 mapping[f"{file}{rank}"] = (x, y)
         
-        # Sextant 6 (bottom-right): E-H ranks 1-4 - ROTATE 90° CLOCKWISE
+        # Sextant 6 (bottom-right): E-H ranks 1-4 - NEEDS 180° MORE ROTATION
         # Bottom edge continuation: E1, F1, G1, H1 (left to right)
         # Right edge: H1, H2, H3, H4 (bottom to top)
         for file_idx, file in enumerate("EFGH"):
             for rank in range(1, 5):
-                # Original: (file_idx, rank-1) in 4x4 grid
-                # Rotate 90° CW: (3-(rank-1), file_idx)
-                x = 3 - (rank - 1) + 4  # 4-7
-                y = file_idx  # 0-3
+                # Was doing 90° CW: (3-(rank-1), file_idx)
+                # Rotate 180° more: (rank-1, 3-file_idx)
+                x = rank - 1 + 4  # 4-7
+                y = 3 - file_idx  # 3-0
                 mapping[f"{file}{rank}"] = (x, y)
         
         return mapping
