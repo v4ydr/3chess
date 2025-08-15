@@ -1,7 +1,6 @@
 import networkx as nx
 from enum import Enum
 import matplotlib.pyplot as plt
-from rays import ray_dict
 
 class EdgeType(Enum):
     RANK = 1
@@ -190,7 +189,7 @@ def create_positions(G, layout_choice):
     
     return pos, title
 
-def on_click(event, G, pos, ax, rook_ray_dict, knight_hop_dict):
+def on_click(event, G, pos, ax, rook_ray_dict, knight_hop_dict, bishop_ray_dict):
     """Handle click events on nodes."""
     if event.inaxes != ax:
         return
@@ -238,8 +237,8 @@ def on_click(event, G, pos, ax, rook_ray_dict, knight_hop_dict):
         click_type = "Rook"
     else:
         # Normal click - show bishop rays
-        if closest_node in ray_dict:
-            for ray in ray_dict[closest_node]:
+        if closest_node in bishop_ray_dict:
+            for ray in bishop_ray_dict[closest_node]:
                 highlighted_nodes.update(ray)
         click_type = "Bishop"
     
@@ -288,9 +287,10 @@ def visualize_graph(G):
     # Create layout for visualization
     pos, title = create_positions(G, layout_choice)
     
-    # Get rook rays and knight hops for click handling
+    # Get rook rays, knight hops, and bishop rays for click handling
     rook_ray_dict = rook_rays()
     knight_hop_dict = knight_hops()
+    bishop_ray_dict = bishop_rays()
     
     # Get node colors based on diagonal reachability
     node_color_map = color_nodes(G)
@@ -334,7 +334,7 @@ def visualize_graph(G):
     ax.set_aspect('equal')
     
     # Connect the click event
-    fig.canvas.mpl_connect('button_press_event', lambda event: on_click(event, G, pos, ax, rook_ray_dict, knight_hop_dict))
+    fig.canvas.mpl_connect('button_press_event', lambda event: on_click(event, G, pos, ax, rook_ray_dict, knight_hop_dict, bishop_ray_dict))
     
     plt.tight_layout()
     plt.show()
@@ -454,9 +454,122 @@ def main():
     print_nodes_by_file(G)
     visualize_graph(G)
 
-
 def bishop_rays():
     """Generate bishop rays for all nodes."""
+    # Square name constants for easy reference
+    A1, A2, A3, A4, A5, A6, A7, A8 = 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8'
+    B1, B2, B3, B4, B5, B6, B7, B8 = 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'
+    C1, C2, C3, C4, C5, C6, C7, C8 = 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8'
+    D1, D2, D3, D4, D5, D6, D7, D8 = 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8'
+    E1, E2, E3, E4, E9, E10, E11, E12 = 'E1', 'E2', 'E3', 'E4', 'E9', 'E10', 'E11', 'E12'
+    F1, F2, F3, F4, F9, F10, F11, F12 = 'F1', 'F2', 'F3', 'F4', 'F9', 'F10', 'F11', 'F12'
+    G1, G2, G3, G4, G9, G10, G11, G12 = 'G1', 'G2', 'G3', 'G4', 'G9', 'G10', 'G11', 'G12'
+    H1, H2, H3, H4, H9, H10, H11, H12 = 'H1', 'H2', 'H3', 'H4', 'H9', 'H10', 'H11', 'H12'
+    I5, I6, I7, I8, I9, I10, I11, I12 = 'I5', 'I6', 'I7', 'I8', 'I9', 'I10', 'I11', 'I12'
+    J5, J6, J7, J8, J9, J10, J11, J12 = 'J5', 'J6', 'J7', 'J8', 'J9', 'J10', 'J11', 'J12'
+    K5, K6, K7, K8, K9, K10, K11, K12 = 'K5', 'K6', 'K7', 'K8', 'K9', 'K10', 'K11', 'K12'
+    L5, L6, L7, L8, L9, L10, L11, L12 = 'L5', 'L6', 'L7', 'L8', 'L9', 'L10', 'L11', 'L12'
+
+
+    ray_dict = {
+        A1: [[B2, C3, D4, E9, F10, G11, H12], [B2, C3, D4, I5, J6, K7, L8]],
+        A2: [[B1], [B3, C4, D5, I6, J7, K8]],
+        A3: [[B2, C1], [B4, C5, D6, I7, J8]],
+        A4: [[B3, C2, D1], [B5, C6, D7, I8]],
+        A5: [[B4, C3, D2, E1], [B6, C7, D8]],
+        A6: [[B5, C4, D3, E2, F1], [B7, C8]],
+        A7: [[B6, C5, D4, E3, F2, G1], [B8]],
+        A8: [[B7, C6, D5, E4, F3, G2, H1], [B7, C6, D5, I9, J10, K11, L12]],
+        B1: [[A2], [C2, D3, E4, F9, G10, H11]],
+        B2: [[A1], [A3], [C1], [C3, D4, E9, F10, G11, H12], [C3, D4, I5, J6, K7, L8]],
+        B3: [[A2], [A4], [C2, D1], [C4, D5, I6, J7, K8]],
+        B4: [[A3], [A5], [C3, D2, E1], [C5, D6, I7, J8]],
+        B5: [[A4], [A6], [C4,D3,E2,F1], [C6,D7,I8]],
+        B6: [[A5], [A7], [C5,D4,E3,F2,G1], [C7,D8]],
+        B7: [[A6], [A8], [C8], [C6, D5, E4, F3, G2, H1], [C6, D5, I9, J10, K11, L12]],
+        B8: [[A7], [C7, D6, I5, J9, K10, L11]],
+        C1: [[B2, A3], [D2, E3, F4, G9, H10]],
+        C2: [[B1], [D1], [B3, A4], [D3, E4, F9, G10, H11]],
+        C3: [[B2, A1], [B4, A5], [D2, E1], [D4, E9, F10, G11, H12], [D4, E9, I5, J6, K7, L8]],
+        C4: [[B3, A2], [B5, A6], [D3, E2, F1], [D5, I6, J7, K8]],
+        C5: [[B4, A3], [B6, A7], [D4, E3, F2, G1], [D6, I7, J8]],
+        C6: [[B5, A4], [B7, A8], [D5, E4, F3, G2, H1], [D7, I8]],
+        C7: [[B6, A5], [B8], [D8], [D6, I5, J9, K10, L11]],
+        C8: [[B7, A6], [D7, I6, J5, K9, L10]],
+        D1: [[C2, B3, A4], [E2, F3, G4, H9]],
+        D2: [[C1], [E1], [C3, B4, A5], [E3, F4, G9, H10]],
+        D3: [[C2, B1], [C4, B5, A6], [E2, F1], [E4, F9, G10, H11]],
+        D4: [[C3, B2, A1], [C5, B6, A7], [E3, F2, G1], [I5, J6, K7, L8], [E9, F10, G11, H12]],
+        D5: [[C4, B3, A2], [C6, B7, A8], [E4, F3, G2, H1], [I6, J7, K8], [I9, J10, K11, L12]],
+        D6: [[C5, B4, A3], [C7, B8], [I7, J8], [I5, J9, K10, L11]],
+        D7: [[C6, B5, A4], [C8], [I8], [I6, J5, K9, L10]],
+        D8: [[C7, B6, A5], [I7, J6, K5, L9]],
+        E1: [[D2, C3, B4, A5], [F2, G3, H4]],
+        E2: [[D1], [F1], [D3, C4, B5, A6], [F3, G4, H9]],
+        E3: [[D2, C1], [D4, C5, B6, A7], [F2, G1], [F4, G9, H10]],
+        E4: [[D3, C2, B1], [D5, C6, B7, A8], [F3, G2, H1], [F9, G10, H11], [I9, J10, K11, L12]],
+        E9: [[D4, C3, B2, A1], [F4, G3, H2], [F10, G11, H12], [I10, J11, K12], [I5, J6, K7, L8]],
+        E10: [[F9, G4, H3], [F11, G12], [I11, J12], [I9, J5, K6, L7]],
+        E11: [[I12], [F12], [F10, G9, H4], [I10, J9, K5, L6]],
+        E12: [[F11, G10, H9], [I11, J10, K9, L5]],
+        F1: [[E2, D3, C4, B5, A6], [G2, H3]],
+        F2: [[E1], [G1], [E3, D4, C5, B6, A7], [G3, H4]],
+        F3: [[E2, D1], [E4, D5, C6, B7, A8], [G2, H1], [G4, H9], [E4, I9, J10, K11, L12]],
+        F4: [[E3, D2, C1], [E9, I10, J11, K12], [G9, H10], [G3, H2]],
+        F9: [[E4, D3, C2, B1], [G4, H3], [G10, H11], [E10, I11, J12]],
+        F10: [[G9, H4], [G11, H12], [E11, I12], [E9, I5, J6, K7, L8], [E9, D4, C3, B2, A1]],
+        F11: [[E12], [G12], [E10, I9, J5, K6, L7], [G10, H9]],
+        F12: [[G11, H10], [E11, I10, J9, K5, L6]],
+        G1: [[H2], [F2, E3, D4, C5, B6, A7]],
+        G2: [[F1], [H1], [H3], [F3, E4, D5, C6, B7, A8], [F3, E4, I9, J10, K11, L12]],
+        G3: [[F2, E1], [H2], [H4], [F4, E9, I10, J11, K12]],
+        G4: [[F3, E2, D1], [H3], [H9], [F9, E10, I11, J12]],
+        G9: [[H4], [H10], [F10, E11, I12], [F4, E3, D2, C1]],
+        G10: [[H9], [H11], [F11, E12], [F9, E4, D3, C2, B1]],
+        G11: [[H10], [F12], [H12], [F10, E9, D4, C3, B2, A1], [F10, E9, I5, J6, K7, L8]],
+        G12: [[H11], [F11, E10, I9, J5, K6, L7]],
+        H1: [[G2, F3, E4, D5, C6, B7, A8], [G2, F3, E4, D5, I9, J10, K11, L12]],
+        H2: [[G1], [G3, F4, E9, I10, J11, K12]],
+        H3: [[G2, F1], [G4, F9, E10, I11, J12]],
+        H4: [[G3, F2, E1], [G9, F10, E11, I12]],
+        H9: [[G4, F3, E2, D1], [G10, F11, E12]],
+        H10: [[G9, F4, E3, D2, C1], [G11, F12]],
+        H11: [[G10, F9, E4, D3, C2, B1], [G12]],
+        H12: [[G11, F10, E9, D4, C3, B2, A1], [G11, F10, E9, I5, J6, K7, L8]],
+        I8: [[J7, K6, L5], [D7, C6, B5, A4]],
+        I7: [[J8], [D8], [J6, K5, L9], [D6, C5, B4, A3]],
+        I6: [[D7, C8], [J7, K8], [D5, C4, B3, A2], [J5, K9, L10]],
+        I5: [[J6, K7, L8], [D6, C7, B8], [J9, K10, L11], [E9, F10, G11, H12], [D4, C3, B2, A1]],
+        I9: [[J5, K6, L7], [D5, C6, B7, A8], [J10, K11, L12], [E10, F11, G12], [E4, F3, G2, H1]],
+        I10: [[J11, K12], [E11, F12], [E9, F4, G3, H2], [J9, K5, L6]],
+        I11: [[J12], [E12], [E10, F9, G4, H3], [J10, K9, L5]],
+        I12: [[E11, F10, G9, H4], [J11, K10, L9]],
+        J8: [[K7, L6], [I7, D6, C5, B4, A3]],
+        J7: [[K8], [I8], [K6, L5], [I6, D5, C4, B3, A2]],
+        J6: [[I7, D8], [K7, L8], [K5, L9], [I5, E9, F10, G11, H12], [I5, D4, C3, B2, A1]],
+        J5: [[K6, L7], [K9, L10], [I6, D7, C8], [I9, E10, F11, G12]],
+        J9: [[K5, L6], [K10, L11], [I10, E11, F12], [I5, D6, C7, B8]],
+        J10: [[K11, L12], [I11, E12], [I9, E4, F3, G2, H1], [I9, D5, C6, B7, A8]],
+        J11: [[K12], [I12], [K10, L9], [I10, E9, F4, G3, H2]],
+        J12: [[K11, L10], [I11, E10, F9, G4, H3]],
+        K8: [[L7], [J7, I6, D5, C4, B3, A2]],
+        K7: [[L8], [J8], [L6], [J6, I5, E9, F10, G11, H12], [J6, I5, D4, C3, B2, A1]],
+        K6: [[L7], [L5], [J7, I8], [J5, I9, E10, F11, G12]],
+        K5: [[L6], [L9], [J6, I7, D8], [J9, I10, E11, F12]],
+        K9: [[L5], [L10], [J5, I6, D7, C8], [J10, I11, E12]],
+        K10: [[L9], [L11], [J9, I5, D6, C7, B8], [J11, I12]],
+        K11: [[L10], [L12], [J12], [J10, I9, D5, C6, B7, A8], [J10, I9, E4, F3, G2, H1]],
+        K12: [[L11], [J11, I10, E9, F4, G3, H2]],
+        L8: [[K7, J6, I5, D4, C3, B2, A1], [K7, J6, I5, E9, F10, G11, H12]],
+        L7: [[K8], [K6, J5, I9, E10, F11, G12]],
+        L6: [[K7, J8], [K5, J9, I10, E11, F12]],
+        L5: [[K6, J7, I8], [K9, J10, I11, E12]],
+        L9: [[K10, J11, I12], [K5, J6, I7, D8]],
+        L10: [[K11, J12], [K9, J5, I6, D7, C8]],
+        L11: [[K12], [K10, J9, I5, D6, C7, B8]],
+        L12: [[K11, J10, I9, D5, C6, B7, A8], [K11, J10, I9, E4, F3, G2, H1]]
+    }
+    
     return ray_dict
 
 def rook_rays():
