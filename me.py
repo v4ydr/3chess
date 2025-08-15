@@ -189,7 +189,8 @@ def create_positions(G, layout_choice):
         title = "3Chess Board Graph Visualization (Grid Layout)"
     
     return pos, title
-def on_click(event, G, pos, ax):
+
+def on_click(event, G, pos, ax, rook_ray_dict, knight_hop_dict):
     """Handle click events on nodes."""
     if event.inaxes != ax:
         return
@@ -219,16 +220,34 @@ def on_click(event, G, pos, ax):
     node_colors = []
     highlighted_nodes = set()
     
-    # Get bishop rays for the clicked node
-    if closest_node in ray_dict:
-        for ray in ray_dict[closest_node]:
-            highlighted_nodes.update(ray)
+    # Check for modifier keys using event.key
+    is_shift_click = hasattr(event, 'key') and event.key and 'shift' in str(event.key).lower()
+    is_space_click = hasattr(event, 'key') and event.key and (event.key == ' ' or event.key == 'space' or 'space' in str(event.key).lower())
+    
+    # Get highlighted nodes based on modifier key
+    if is_space_click:
+        # Space key - show knight hops
+        if closest_node in knight_hop_dict:
+            highlighted_nodes.update(knight_hop_dict[closest_node])
+        click_type = "Knight"
+    elif is_shift_click:
+        # Shift key - show rook rays
+        if closest_node in rook_ray_dict:
+            for ray in rook_ray_dict[closest_node]:
+                highlighted_nodes.update(ray)
+        click_type = "Rook"
+    else:
+        # Normal click - show bishop rays
+        if closest_node in ray_dict:
+            for ray in ray_dict[closest_node]:
+                highlighted_nodes.update(ray)
+        click_type = "Bishop"
     
     for node in G.nodes():
         if node == closest_node:
             node_colors.append('red')  # Clicked node is red
         elif node in highlighted_nodes:
-            node_colors.append('green')  # Nodes in bishop rays are green
+            node_colors.append('green')  # Nodes in rays/hops are green
         elif node_color_map[node] == 'dark':
             node_colors.append('brown')  # Original dark nodes
         else:
@@ -254,12 +273,13 @@ def on_click(event, G, pos, ax):
     # Draw labels
     nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold', ax=ax)
 
-    ax.set_title(f"3Chess Board - Clicked: {closest_node}")
+    ax.set_title(f"3Chess Board - {click_type} from: {closest_node}")
     ax.grid(True, alpha=0.3)
     ax.set_aspect('equal')
     
     # Redraw the canvas
     ax.figure.canvas.draw()
+
 def visualize_graph(G):
     """Visualize the graph with user-selected layout."""
     # Ask user for layout preference
@@ -267,6 +287,10 @@ def visualize_graph(G):
 
     # Create layout for visualization
     pos, title = create_positions(G, layout_choice)
+    
+    # Get rook rays and knight hops for click handling
+    rook_ray_dict = rook_rays()
+    knight_hop_dict = knight_hops()
     
     # Get node colors based on diagonal reachability
     node_color_map = color_nodes(G)
@@ -302,7 +326,7 @@ def visualize_graph(G):
     # Draw labels
     nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold', ax=ax)
 
-    ax.set_title(title)
+    ax.set_title(title + " (Click: Bishop rays, Shift+Click: Rook rays, Space+Click: Knight hops)")
     if layout_choice != "2":
         ax.set_xlabel("Files (A-L)")
         ax.set_ylabel("Ranks (1-12)")
@@ -310,10 +334,11 @@ def visualize_graph(G):
     ax.set_aspect('equal')
     
     # Connect the click event
-    fig.canvas.mpl_connect('button_press_event', lambda event: on_click(event, G, pos, ax))
+    fig.canvas.mpl_connect('button_press_event', lambda event: on_click(event, G, pos, ax, rook_ray_dict, knight_hop_dict))
     
     plt.tight_layout()
     plt.show()
+
 def create_3chess_graph():
     """Create the complete 3Chess board graph."""
     G = create_nodes()
@@ -323,6 +348,7 @@ def create_3chess_graph():
     connect_sections(G)
     create_diagonal_edges(G)
     return G
+
 def create_diagonal_edges(G):
     """Add diagonal edges to a graph that already has rank and file edges."""
     
@@ -375,6 +401,7 @@ def create_diagonal_edges(G):
                     if edge_tuple not in diagonal_edges:
                         G.add_edge(node, rank_neighbor, edge_type=EdgeType.DIAG.value)
                         diagonal_edges.add(edge_tuple)
+
 def color_nodes(G):
     """Color nodes based on diagonal reachability from A1.
     Nodes reachable from A1 using only diagonal edges are 'dark'.
@@ -420,11 +447,132 @@ def color_nodes(G):
         print(f"WARNING: Expected 48 dark and 48 light nodes, but got {dark_count} dark and {light_count} light")
     
     return node_colors
+
 def main():
     """Main function to create and visualize the 3Chess board."""
     G = create_3chess_graph()
     print_nodes_by_file(G)
     visualize_graph(G)
 
+
+def bishop_rays():
+    """Generate bishop rays for all nodes."""
+    return ray_dict
+
+def rook_rays():
+    """Generate rook rays for all nodes."""
+    G = create_3chess_graph()
+    
+    # Verify we have 96 nodes
+    node_count = len(G.nodes())
+    if node_count != 96:
+        print(f"WARNING: Expected 96 nodes, but got {node_count}")
+    
+    rook_ray_dict = {}
+    
+    for node in G.nodes():
+        rays = []
+        
+        # For each direction (rank/file), collect nodes in order
+        for neighbor in G.neighbors(node):
+            edge_data = G.get_edge_data(node, neighbor)
+            if edge_data and edge_data.get('edge_type') in [EdgeType.RANK.value, EdgeType.FILE.value]:
+                # Start a ray in this direction
+                ray = []
+                current = neighbor
+                visited_in_ray = set([node])
+                
+                # Follow the direction as far as possible
+                while current and current not in visited_in_ray:
+                    ray.append(current)
+                    visited_in_ray.add(current)
+                    
+                    # Find the next node in the same direction
+                    next_node = None
+                    for next_neighbor in G.neighbors(current):
+                        next_edge_data = G.get_edge_data(current, next_neighbor)
+                        if (next_edge_data and 
+                            next_edge_data.get('edge_type') == edge_data.get('edge_type') and
+                            next_neighbor not in visited_in_ray):
+                            next_node = next_neighbor
+                            break
+                    
+                    current = next_node
+                
+                if ray:  # Only add non-empty rays
+                    rays.append(ray)
+        
+        rook_ray_dict[node] = rays
+    
+    return rook_ray_dict
+
+def knight_hops():
+    """Generate knight hops for all nodes.
+    Knight moves are L-shaped: 2 steps in one direction, then 1 step orthogonal.
+    This covers all patterns: rank-rank-file, file-file-rank, rank-file-file, file-rank-rank.
+    """
+    G = create_3chess_graph()
+    
+    # Verify we have 96 nodes
+    node_count = len(G.nodes())
+    if node_count != 96:
+        print(f"WARNING: Expected 96 nodes, but got {node_count}")
+    
+    knight_hop_dict = {}
+    
+    for node in G.nodes():
+        hops = set()  # Use set to avoid duplicates
+        
+        # Get all 1-neighbors with their edge types
+        one_neighbors = []
+        for neighbor in G.neighbors(node):
+            edge_data = G.get_edge_data(node, neighbor)
+            if edge_data and edge_data.get('edge_type') in [EdgeType.RANK.value, EdgeType.FILE.value]:
+                one_neighbors.append((neighbor, edge_data.get('edge_type')))
+        
+        # Pattern 1: 2 steps in one direction, then 1 step orthogonal
+        # For each 1-neighbor, find their straight 2-neighbors
+        for one_neighbor, edge_type in one_neighbors:
+            # Find 2-step neighbors in the same direction
+            current = one_neighbor
+            for next_neighbor in G.neighbors(current):
+                next_edge_data = G.get_edge_data(current, next_neighbor)
+                if (next_edge_data and 
+                    next_edge_data.get('edge_type') == edge_type and
+                    next_neighbor != node):
+                    # Now at 2-step neighbor, find orthogonal 1-step
+                    two_step_neighbor = next_neighbor
+                    for final_neighbor in G.neighbors(two_step_neighbor):
+                        final_edge_data = G.get_edge_data(two_step_neighbor, final_neighbor)
+                        if (final_edge_data and 
+                            final_edge_data.get('edge_type') in [EdgeType.RANK.value, EdgeType.FILE.value] and
+                            final_edge_data.get('edge_type') != edge_type and
+                            final_neighbor != current):
+                            hops.add(final_neighbor)
+        
+        # Pattern 2: 1 step in one direction, then 2 steps orthogonal
+        # For each 1-neighbor, find their orthogonal neighbors
+        for one_neighbor, edge_type in one_neighbors:
+            # Find orthogonal neighbors of the 1-neighbor
+            for ortho_neighbor in G.neighbors(one_neighbor):
+                ortho_edge_data = G.get_edge_data(one_neighbor, ortho_neighbor)
+                if (ortho_edge_data and 
+                    ortho_edge_data.get('edge_type') in [EdgeType.RANK.value, EdgeType.FILE.value] and
+                    ortho_edge_data.get('edge_type') != edge_type and
+                    ortho_neighbor != node):
+                    # Now from ortho_neighbor, take another step in the same orthogonal direction
+                    for final_neighbor in G.neighbors(ortho_neighbor):
+                        final_edge_data = G.get_edge_data(ortho_neighbor, final_neighbor)
+                        if (final_edge_data and 
+                            final_edge_data.get('edge_type') == ortho_edge_data.get('edge_type') and
+                            final_neighbor != one_neighbor):
+                            hops.add(final_neighbor)
+        
+        knight_hop_dict[node] = list(hops)
+    
+    return knight_hop_dict
+
 if __name__ == "__main__":
     main()
+# End of Selection
+    
