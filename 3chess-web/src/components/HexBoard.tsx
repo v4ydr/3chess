@@ -46,13 +46,14 @@ const DraggedPiece: React.FC<{ piece: Piece; x: number; y: number }> = ({ piece,
 
 interface HexBoardProps {
   state: BoardState;
-  onSquareClick: (node: string) => void;
+  onSquareClick: (node: string, isDebugMode?: boolean) => void;
 }
 
 const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
   const nodeMapping = useMemo(() => createNodeMapping(), []);
   const [draggedNode, setDraggedNode] = useState<string | null>(null);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Create cells for all positions
@@ -69,10 +70,28 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
     return cellMap;
   }, [nodeMapping]);
   
+  const handleClick = (node: string, event: React.MouseEvent) => {
+    // Don't handle click if we're dragging
+    if (!isDraggingRef.current) {
+      onSquareClick(node, event.shiftKey);
+    }
+  };
+
   const handleDragStart = (node: string, event: React.MouseEvent) => {
+    // Don't start drag in debug mode - just use clicks
+    if (event.shiftKey) {
+      return;
+    }
+    
     const piece = state.pieces.get(node);
+    
+    // Only allow current player's pieces to drag in normal mode
     if (piece && piece.player === state.currentPlayer) {
       event.preventDefault();
+      event.stopPropagation();
+      
+      // Mark that we're starting a drag
+      isDraggingRef.current = true;
       
       // Get initial mouse position
       if (svgRef.current) {
@@ -83,11 +102,14 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
         // Set initial drag position to current mouse position
         setDragPosition({ x: initialX, y: initialY });
         setDraggedNode(node);
-        onSquareClick(node); // Select the piece
+        
+        // Select the piece to show valid moves
+        onSquareClick(node, false);
       }
       
       // Track mouse position for dragging
       const handleMouseMove = (e: MouseEvent) => {
+        e.preventDefault();
         if (svgRef.current) {
           const rect = svgRef.current.getBoundingClientRect();
           const x = ((e.clientX - rect.left) / rect.width) * 900;
@@ -97,6 +119,7 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
       };
       
       const handleMouseUp = (e: MouseEvent) => {
+        e.preventDefault();
         if (svgRef.current) {
           const rect = svgRef.current.getBoundingClientRect();
           const x = ((e.clientX - rect.left) / rect.width) * 900;
@@ -109,13 +132,15 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
               Math.pow(cell.center.y - y, 2)
             );
             if (dist < 30) { // Within reasonable distance of center
-              onSquareClick(dropNode);
+              // Normal drag - never in debug mode
+              onSquareClick(dropNode, false);
               break;
             }
           }
         }
         
         setDraggedNode(null);
+        isDraggingRef.current = false;
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
@@ -158,7 +183,8 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
               isPossibleMove={isPossibleMove}
               isGrayMove={isGrayMove}
               isLastMove={isLastMoveSquare}
-              onClick={() => onSquareClick(node)}
+              selectedPiecePlayer={selectedPiece?.player}
+              onClick={(e) => handleClick(node, e)}
               onMouseDown={(e) => handleDragStart(node, e)}
             />
           );

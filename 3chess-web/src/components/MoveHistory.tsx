@@ -2,21 +2,22 @@ import React from 'react';
 import { Player, PieceType } from '../types/game';
 import type { Move } from '../types/game';
 import './MoveHistory.css';
-
+const USE_STRING = false;
 interface MoveHistoryProps {
   moves: Move[];
   currentPlayer: Player;
 }
 
+
 const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentPlayer }) => {
   const getPieceSymbol = (type: PieceType): string => {
     switch (type) {
-      case PieceType.KING: return '♚';
-      case PieceType.QUEEN: return '♛';
-      case PieceType.ROOK: return '♜';
-      case PieceType.BISHOP: return '♝';
-      case PieceType.KNIGHT: return '♞';
-      case PieceType.PAWN: return '♟';
+      case PieceType.KING: return USE_STRING ? 'K' : '♚';
+      case PieceType.QUEEN: return USE_STRING ? 'Q' : '♛';
+      case PieceType.ROOK: return USE_STRING ? 'R' : '♜';
+      case PieceType.BISHOP: return USE_STRING ? 'B' : '♝';
+      case PieceType.KNIGHT: return USE_STRING ? 'N' : '♞';
+      case PieceType.PAWN: return USE_STRING ? 'P' : '♟';
       default: return '';
     }
   };
@@ -87,12 +88,19 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentPlayer }) => {
                   <span className="move-text">
                     <span className="piece-icon" style={{ 
                       color: getPlayerColor(Player.RED),
-                      WebkitTextStrokeColor: '#808080'
+                      WebkitTextStrokeColor: '#808080',
+                      fontSize: USE_STRING ? 'inherit' : 'inherit'
                     }}>
                       {getPieceSymbol(group[0].piece)}
                     </span>
                     <span className="move-notation">
                       {group[0].from} {group[0].captured ? '×' : '→'} {group[0].to}
+                      {group[0].promotion && (
+                        <span>=<span style={{ 
+                          color: getPlayerColor(Player.RED),
+                          WebkitTextStrokeColor: '#808080'
+                        }}>{getPieceSymbol(group[0].promotion)}</span></span>
+                      )}
                     </span>
                   </span>
                 )}
@@ -102,12 +110,19 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentPlayer }) => {
                   <span className="move-text">
                     <span className="piece-icon" style={{ 
                       color: getPlayerColor(Player.WHITE),
-                      WebkitTextStrokeColor: '#000000'
+                      WebkitTextStrokeColor: '#000000',
+                      fontSize: USE_STRING ? 'inherit' : 'inherit'
                     }}>
                       {getPieceSymbol(group[1].piece)}
                     </span>
                     <span className="move-notation">
                       {group[1].from} {group[1].captured ? '×' : '→'} {group[1].to}
+                      {group[1].promotion && (
+                        <span>=<span style={{ 
+                          color: getPlayerColor(Player.WHITE),
+                          WebkitTextStrokeColor: '#000000'
+                        }}>{getPieceSymbol(group[1].promotion)}</span></span>
+                      )}
                     </span>
                   </span>
                 )}
@@ -117,12 +132,19 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentPlayer }) => {
                   <span className="move-text">
                     <span className="piece-icon" style={{ 
                       color: getPlayerColor(Player.BLACK),
-                      WebkitTextStrokeColor: '#FFFFFF'
+                      WebkitTextStrokeColor: '#FFFFFF',
+                      fontSize: USE_STRING ? 'inherit' : 'inherit'
                     }}>
                       {getPieceSymbol(group[2].piece)}
                     </span>
                     <span className="move-notation">
                       {group[2].from} {group[2].captured ? '×' : '→'} {group[2].to}
+                      {group[2].promotion && (
+                        <span>=<span style={{ 
+                          color: getPlayerColor(Player.BLACK),
+                          WebkitTextStrokeColor: '#FFFFFF'
+                        }}>{getPieceSymbol(group[2].promotion)}</span></span>
+                      )}
                     </span>
                   </span>
                 )}

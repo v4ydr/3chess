@@ -76,12 +76,59 @@ export class GameEngine {
       possibleMoves: [],
       moveHistory: [],
       lastMoveFrom: null,
-      lastMoveTo: null
+      lastMoveTo: null,
+      promotionPending: null
     };
   }
   
   getState(): BoardState {
     return this.state;
+  }
+  
+  selectNodeDebug(node: string): void {
+    // Debug mode: move any piece to any square without restrictions
+    const piece = this.state.pieces.get(node);
+    const selectedPiece = this.state.selectedNode ? this.state.pieces.get(this.state.selectedNode) : null;
+    
+    if (this.state.selectedNode && selectedPiece) {
+      // We have a piece selected - move it to the clicked square (any square)
+      if (node !== this.state.selectedNode) {
+        this.movePieceDebug(this.state.selectedNode, node);
+      } else {
+        // Clicked on the same piece - deselect
+        this.state.selectedNode = null;
+        this.state.possibleMoves = [];
+      }
+    } else if (piece) {
+      // No piece selected - select this piece
+      this.state.selectedNode = node;
+      // In debug mode, show all squares as possible moves (except the piece's current square)
+      this.state.possibleMoves = this.graph.getNodes().filter(n => n !== node);
+    } else {
+      // Clicked on empty square with nothing selected - do nothing
+      this.state.selectedNode = null;
+      this.state.possibleMoves = [];
+    }
+  }
+  
+  private movePieceDebug(from: string, to: string): void {
+    // Debug move - no history, no turn change
+    const piece = this.state.pieces.get(from);
+    if (!piece) return;
+    
+    // Move piece
+    this.state.pieces.delete(from);
+    this.state.pieces.set(to, piece);
+    
+    // Track last move for highlighting (but don't record in history)
+    this.state.lastMoveFrom = from;
+    this.state.lastMoveTo = to;
+    
+    // Clear selection
+    this.state.selectedNode = null;
+    this.state.possibleMoves = [];
+    
+    // Don't change turn or record move
   }
   
   selectNode(node: string): void {
@@ -141,6 +188,24 @@ export class GameEngine {
     // Check if there's a capture
     const capturedPiece = this.state.pieces.get(to);
     
+    // Move piece first
+    this.state.pieces.delete(from);
+    this.state.pieces.set(to, piece);
+    
+    // Check for pawn promotion
+    if (piece.type === PieceType.PAWN && this.isPromotionSquare(to, piece.player)) {
+      // Set promotion pending state
+      this.state.promotionPending = {
+        from,
+        to,
+        player: piece.player
+      };
+      // Don't advance turn yet - wait for promotion choice
+      this.state.selectedNode = null;
+      this.state.possibleMoves = [];
+      return;
+    }
+    
     // Record the move
     const move: Move = {
       player: piece.player,
@@ -155,13 +220,57 @@ export class GameEngine {
     this.state.lastMoveFrom = from;
     this.state.lastMoveTo = to;
     
-    // Move piece
-    this.state.pieces.delete(from);
-    this.state.pieces.set(to, piece);
-    
     // Clear selection
     this.state.selectedNode = null;
     this.state.possibleMoves = [];
+    
+    // Next player's turn
+    const currentIndex = this.turnOrder.indexOf(this.state.currentPlayer);
+    this.state.currentPlayer = this.turnOrder[(currentIndex + 1) % 3];
+  }
+  
+  private isPromotionSquare(square: string, player: Player): boolean {
+    const file = square[0];
+    const rank = parseInt(square.slice(1));
+    
+    if (player === Player.RED) {
+      // Red promotes on rank 8, rank 12, or L file
+      return rank === 8 || rank === 12 || file === 'L';
+    } else if (player === Player.WHITE) {
+      // White promotes on rank 1, rank 12, or H file  
+      return rank === 1 || rank === 12 || file === 'H';
+    } else if (player === Player.BLACK) {
+      // Black promotes on rank 1, rank 8, or A file
+      return rank === 1 || rank === 8 || file === 'A';
+    }
+    
+    return false;
+  }
+  
+  promotePawn(pieceType: PieceType): void {
+    if (!this.state.promotionPending) return;
+    
+    const { from, to, player } = this.state.promotionPending;
+    
+    // Replace pawn with promoted piece
+    this.state.pieces.set(to, { player, type: pieceType });
+    
+    // Record the move with promotion
+    const move: Move = {
+      player,
+      piece: PieceType.PAWN,
+      from,
+      to,
+      promotion: pieceType
+    };
+    this.state.moveHistory.push(move);
+    
+    // Track last move for highlighting
+    this.state.lastMoveFrom = from;
+    this.state.lastMoveTo = to;
+    
+    // Clear promotion state
+    this.state.promotionPending = null;
     
     // Next player's turn
     const currentIndex = this.turnOrder.indexOf(this.state.currentPlayer);
@@ -346,10 +455,16 @@ export class GameEngine {
           // Normal progression: next rank up
           isForwardDiagonal = neighborRank === rank + 1;
         } else if (rank === 4) {
-          // Transition: can capture into rank 5 or rank 9
+          // Transition: can capture into rank 5 (for files on same side) or rank 9 (cross-board)
           isForwardDiagonal = neighborRank === 5 || neighborRank === 9;
+        } else if (rank >= 5 && rank <= 7) {
+          // In middle section: continue upward
+          isForwardDiagonal = neighborRank === rank + 1;
+        } else if (rank === 8) {
+          // At rank 8, can transition to rank 9 (toward black's area)
+          isForwardDiagonal = neighborRank === 9;
         } else if (rank >= 9) {
-          // In top section: continue upward
+          // In top section: continue upward toward black's backrank
           isForwardDiagonal = neighborRank === rank + 1;
         }
       } else if (player === Player.WHITE) {
@@ -358,10 +473,12 @@ export class GameEngine {
           // Moving down in middle section
           isForwardDiagonal = neighborRank === rank - 1;
         } else if (rank === 5) {
-          // At transition: can go to 4 (for ABCD/EFGH) or 9 (for IJKL)
-          if ('IJKL'.includes(file) && 'IJKL'.includes(neighborFile)) {
+          // At transition: can go to 4 (for ABCD/EFGH) or 9 (for IJKL → EFGH cross-board)
+          if ('IJKL'.includes(file)) {
+            // From IJKL at rank 5, can capture to rank 9 (any file in that area)
             isForwardDiagonal = neighborRank === 9;
           } else {
+            // From ABCD/EFGH at rank 5, can capture to rank 4
             isForwardDiagonal = neighborRank === 4;
           }
         } else if (rank >= 9) {
@@ -377,15 +494,25 @@ export class GameEngine {
           // Moving down from top
           isForwardDiagonal = neighborRank === rank - 1;
         } else if (rank === 9) {
-          // At transition: can go to 5 (for IJKL) or 4 (for EFGH)
-          isForwardDiagonal = neighborRank === 5 || neighborRank === 4;
-        } else if (rank >= 5 && rank <= 8) {
+          // At transition: can go to 5 (for IJKL) or 4 (for EFGH) or 8 (staying in upper area)
+          isForwardDiagonal = neighborRank === 8 || neighborRank === 5 || neighborRank === 4;
+        } else if (rank >= 6 && rank <= 8) {
           // In middle section after transition (IJKL files): moving up
           if ('IJKL'.includes(file)) {
             isForwardDiagonal = neighborRank === rank + 1;
+          } else if ('EFGH'.includes(file)) {
+            // EFGH files in middle section: moving down
+            isForwardDiagonal = neighborRank === rank - 1;
+          }
+        } else if (rank === 5) {
+          // At rank 5: IJKL continues up to 6, EFGH transitions down to 4
+          if ('IJKL'.includes(file)) {
+            isForwardDiagonal = neighborRank === 6;
+          } else if ('EFGH'.includes(file)) {
+            isForwardDiagonal = neighborRank === 4;
           }
         } else if (rank < 5) {
-          // In bottom section (EFGH files): moving down
+          // In bottom section: moving down toward red's area
           isForwardDiagonal = neighborRank === rank - 1;
         }
       }

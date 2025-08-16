@@ -28,12 +28,12 @@ body {
 
 .sidebar {
   width: 500px;
-  background: #252525;
+  background: #555;
   padding: 30px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  border-left: 1px solid #333;
+  border-left: 1px solid #555;
   height: 100vh;
   overflow: hidden;
 }

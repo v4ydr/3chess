@@ -30,6 +30,7 @@ export interface Move {
   from: string;
   to: string;
   captured?: Piece;
+  promotion?: PieceType;
 }
 
 export interface BoardState {
@@ -40,6 +41,11 @@ export interface BoardState {
   moveHistory: Move[];
   lastMoveFrom: string | null;
   lastMoveTo: string | null;
+  promotionPending: {
+    from: string;
+    to: string;
+    player: Player;
+  } | null;
 }
 
 export enum EdgeType {

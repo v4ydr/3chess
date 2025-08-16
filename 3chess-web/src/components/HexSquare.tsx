@@ -11,7 +11,8 @@ interface HexSquareProps {
   isPossibleMove: boolean;
   isGrayMove?: boolean;  // For showing moves when not player's turn
   isLastMove?: boolean;  // For highlighting last move
-  onClick: () => void;
+  selectedPiecePlayer?: Player;  // The player of the selected piece
+  onClick: (e: React.MouseEvent) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
 }
 
@@ -33,6 +34,7 @@ const HexSquare: React.FC<HexSquareProps> = ({
   isPossibleMove,
   isGrayMove,
   isLastMove,
+  selectedPiecePlayer,
   onClick,
   onMouseDown,
 }) => {
@@ -41,6 +43,24 @@ const HexSquare: React.FC<HexSquareProps> = ({
   // EXACT colors from unified_chess.py
   const darkColor = '#769656';  // Forest green
   const lightColor = '#EEEED2'; // Beige
+  
+  // Get color-tinted gray for move indicators based on player
+  const getMoveIndicatorColor = (player?: Player): string => {
+    if (!player) return 'rgba(180, 180, 180, 0.5)'; // Default gray
+    
+    switch (player) {
+      case Player.RED:
+        return 'rgba(214, 100, 120, 0.5)'; // Grayish with red tint
+      case Player.WHITE:
+        return 'rgba(200, 200, 200, 0.5)'; // Light gray for white
+      case Player.BLACK:
+        return 'rgba(80, 80, 80, 0.5)'; // Dark gray for black
+      default:
+        return 'rgba(180, 180, 180, 0.5)';
+    }
+  };
+  
+  const indicatorColor = getMoveIndicatorColor(selectedPiecePlayer);
   
   const fillColor = cell.isDark ? darkColor : lightColor;
   const edgeColor = cell.isDark ? '#14321900' : '#C8B88B00';
@@ -120,7 +140,7 @@ const HexSquare: React.FC<HexSquareProps> = ({
         </text>
       )}
       
-      {/* Possible move indicator (gray circle/dot for valid moves) - rendered OVER pieces */}
+      {/* Possible move indicator (color-tinted circle/dot for valid moves) - rendered OVER pieces */}
       {isPossibleMove && (
         piece ? (
           // Ring for captures
@@ -129,7 +149,7 @@ const HexSquare: React.FC<HexSquareProps> = ({
             cy={cell.center.y}
             r="28"
             fill="none"
-            stroke="rgba(180, 180, 180, 0.5)"
+            stroke={indicatorColor}
             strokeWidth="5"
           />
         ) : (
@@ -138,7 +158,7 @@ const HexSquare: React.FC<HexSquareProps> = ({
             cx={cell.center.x}
             cy={cell.center.y}
             r="12"
-            fill="rgba(180, 180, 180, 0.5)"
+            fill={indicatorColor}
             stroke="none"
           />
         )
@@ -152,7 +172,7 @@ const HexSquare: React.FC<HexSquareProps> = ({
             y1={cell.center.y - (piece ? 15 : 8)}
             x2={cell.center.x + (piece ? 15 : 8)}
             y2={cell.center.y + (piece ? 15 : 8)}
-            stroke="rgba(150, 150, 150, 0.5)"
+            stroke={indicatorColor}
             strokeWidth="4"
             strokeLinecap="round"
           />
@@ -161,7 +181,7 @@ const HexSquare: React.FC<HexSquareProps> = ({
             y1={cell.center.y + (piece ? 15 : 8)}
             x2={cell.center.x + (piece ? 15 : 8)}
             y2={cell.center.y - (piece ? 15 : 8)}
-            stroke="rgba(150, 150, 150, 0.5)"
+            stroke={indicatorColor}
             strokeWidth="4"
             strokeLinecap="round"
           />
