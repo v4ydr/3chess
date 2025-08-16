@@ -24,31 +24,6 @@ function App() {
     setGameState({ ...gameEngine.getState() });
   };
   
-  const getPlayerName = (player: Player): string => {
-    switch (player) {
-      case Player.RED:
-        return 'Red';
-      case Player.WHITE:
-        return 'White';
-      case Player.BLACK:
-        return 'Black';
-      default:
-        return '';
-    }
-  };
-  
-  const getPlayerColor = (player: Player): string => {
-    switch (player) {
-      case Player.RED:
-        return '#d61539';
-      case Player.WHITE:
-        return '#808080';
-      case Player.BLACK:
-        return '#1a1a1a';
-      default:
-        return '#000';
-    }
-  };
   
   return (
     <div className="app">

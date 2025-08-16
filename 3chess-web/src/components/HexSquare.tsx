@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import type { Piece } from '../types/game';
 import { Cell } from '../utils/hexMath';
-import { Player, PieceType } from '../types/game';
+import { Player } from '../types/game';
+import { 
+  COLORS, 
+  SIZES, 
+  pieceSymbols,
+  getPlayerColor,
+  getPlayerStrokeColor,
+  getMoveIndicatorColor 
+} from '../config/constants';
 
 interface HexSquareProps {
   node: string;
@@ -12,19 +20,11 @@ interface HexSquareProps {
   isGrayMove?: boolean;  // For showing moves when not player's turn
   isLastMove?: boolean;  // For highlighting last move
   selectedPiecePlayer?: Player;  // The player of the selected piece
+  isDragHovered?: boolean;  // True when a dragged piece is hovering over this square
   onClick: (e: React.MouseEvent) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
 }
 
-// Filled/solid Unicode pieces
-const pieceSymbols: Record<PieceType, string> = {
-  [PieceType.KING]: '♚',
-  [PieceType.QUEEN]: '♛',
-  [PieceType.ROOK]: '♜',
-  [PieceType.BISHOP]: '♝',
-  [PieceType.KNIGHT]: '♞',
-  [PieceType.PAWN]: '♟',
-};
 
 const HexSquare: React.FC<HexSquareProps> = ({
   node,
@@ -35,41 +35,36 @@ const HexSquare: React.FC<HexSquareProps> = ({
   isGrayMove,
   isLastMove,
   selectedPiecePlayer,
+  isDragHovered,
   onClick,
   onMouseDown,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  
-  // EXACT colors from unified_chess.py
-  const darkColor = '#769656';  // Forest green
-  const lightColor = '#EEEED2'; // Beige
-  
-  // Get color-tinted gray for move indicators based on player
-  const getMoveIndicatorColor = (player?: Player): string => {
-    if (!player) return 'rgba(180, 180, 180, 0.5)'; // Default gray
-    
-    switch (player) {
-      case Player.RED:
-        return 'rgba(214, 100, 120, 0.5)'; // Grayish with red tint
-      case Player.WHITE:
-        return 'rgba(200, 200, 200, 0.5)'; // Light gray for white
-      case Player.BLACK:
-        return 'rgba(80, 80, 80, 0.5)'; // Dark gray for black
-      default:
-        return 'rgba(180, 180, 180, 0.5)';
-    }
-  };
+  const [isPieceHovered, setIsPieceHovered] = useState(false);
   
   const indicatorColor = getMoveIndicatorColor(selectedPiecePlayer);
   
-  const fillColor = cell.isDark ? darkColor : lightColor;
-  const edgeColor = cell.isDark ? '#14321900' : '#C8B88B00';
+  const fillColor = cell.isDark ? COLORS.board.darkSquare : COLORS.board.lightSquare;
+  const edgeColor = cell.isDark ? COLORS.board.darkSquareEdge : COLORS.board.lightSquareEdge;
   
   // Create polygon points string
   const pointsStr = cell.points.map(p => `${p[0]},${p[1]}`).join(' ');
   
-  // Determine cursor style
-  const cursorStyle = piece ? 'pointer' : 'default';
+  // Create inset polygon for inner border (scaled down slightly)
+  const insetPoints = cell.points.map(p => {
+    // Move each point toward the center by a small amount
+    const dx = p[0] - cell.center.x;
+    const dy = p[1] - cell.center.y;
+    const scale = SIZES.dragHoverInsetScale; // Scale down to create minimal inset
+    return [
+      cell.center.x + dx * scale,
+      cell.center.y + dy * scale
+    ];
+  });
+  const insetPointsStr = insetPoints.map(p => `${p[0]},${p[1]}`).join(' ');
+  
+  // Determine cursor style - only pointer when hovering over piece itself
+  const cursorStyle = isPieceHovered ? 'pointer' : 'default';
   
   return (
     <g 
@@ -84,32 +79,42 @@ const HexSquare: React.FC<HexSquareProps> = ({
         points={pointsStr}
         fill={fillColor}
         stroke={edgeColor}
-        strokeWidth="1"
+        strokeWidth={SIZES.pieceStrokeWidth}
       />
       
       {/* Highlight overlay for selection or last move */}
       {(isSelected || isLastMove) && (
         <polygon
           points={pointsStr}
-          fill="#FFFF00"
-          fillOpacity={"0.4"}
+          fill={COLORS.ui.selectionHighlight}
+          fillOpacity={COLORS.ui.selectionHighlightOpacity}
           stroke="none"
+        />
+      )}
+      
+      {/* Drag hover outline - inside border */}
+      {isDragHovered && (
+        <polygon
+          points={insetPointsStr}
+          fill="none"
+          stroke={COLORS.ui.dragHoverStroke}
+          strokeWidth={SIZES.dragHoverStrokeWidth}
         />
       )}
       
       {/* Square name with hover effect */}
       <text
         x={cell.center.x}
-        y={cell.center.y + 5}
-        fontSize="18"
+        y={cell.center.y + SIZES.squareLabelOffsetY}
+        fontSize={SIZES.squareLabelFontSize}
         fontWeight="bold"
-        fill="#666"
-        opacity={isHovered ? "0.8" : "0.2"}
+        fill={cell.isDark ? COLORS.board.darkSquareText : COLORS.board.lightSquareText}
+        opacity={isHovered ? SIZES.squareLabelOpacityHover : SIZES.squareLabelOpacityNormal}
         textAnchor="middle"
         style={{ 
           userSelect: 'none', 
           pointerEvents: 'none',
-          transition: 'opacity 0.2s ease'
+          transition: `opacity ${SIZES.transitionDuration} ease`
         }}
       >
         {node}
@@ -119,22 +124,16 @@ const HexSquare: React.FC<HexSquareProps> = ({
       {piece && (
         <text
           x={cell.center.x}
-          y={cell.center.y + 18}
-          fontSize="60"
+          y={cell.center.y + SIZES.pieceOffsetY}
+          fontSize={SIZES.pieceFontSize}
           fontWeight="bold"
           textAnchor="middle"
-          fill={
-            piece.player === Player.RED ? '#D61539' :
-            piece.player === Player.WHITE ? '#F0F0F0' :
-            '#0A0A0A'
-          }
-          stroke={
-            piece.player === Player.RED ? '#808080' :
-            piece.player === Player.WHITE ? '#000000' :
-            '#FFFFFF'
-          }
-          strokeWidth="1"
-          style={{ userSelect: 'none' }}
+          fill={getPlayerColor(piece.player)}
+          stroke={getPlayerStrokeColor(piece.player)}
+          strokeWidth={SIZES.pieceStrokeWidth}
+          style={{ userSelect: 'none', cursor: 'pointer' }}
+          onMouseEnter={() => setIsPieceHovered(true)}
+          onMouseLeave={() => setIsPieceHovered(false)}
         >
           {pieceSymbols[piece.type]}
         </text>
@@ -147,17 +146,17 @@ const HexSquare: React.FC<HexSquareProps> = ({
           <circle
             cx={cell.center.x}
             cy={cell.center.y}
-            r="28"
+            r={SIZES.captureIndicatorRadius}
             fill="none"
             stroke={indicatorColor}
-            strokeWidth="5"
+            strokeWidth={SIZES.captureIndicatorStrokeWidth}
           />
         ) : (
           // Small filled circle for empty squares
           <circle
             cx={cell.center.x}
             cy={cell.center.y}
-            r="12"
+            r={SIZES.moveIndicatorRadius}
             fill={indicatorColor}
             stroke="none"
           />
@@ -168,21 +167,21 @@ const HexSquare: React.FC<HexSquareProps> = ({
       {isGrayMove && (
         <g>
           <line
-            x1={cell.center.x - (piece ? 15 : 8)}
-            y1={cell.center.y - (piece ? 15 : 8)}
-            x2={cell.center.x + (piece ? 15 : 8)}
-            y2={cell.center.y + (piece ? 15 : 8)}
+            x1={cell.center.x - (piece ? SIZES.previewMoveLineOffsetPiece : SIZES.previewMoveLineOffset)}
+            y1={cell.center.y - (piece ? SIZES.previewMoveLineOffsetPiece : SIZES.previewMoveLineOffset)}
+            x2={cell.center.x + (piece ? SIZES.previewMoveLineOffsetPiece : SIZES.previewMoveLineOffset)}
+            y2={cell.center.y + (piece ? SIZES.previewMoveLineOffsetPiece : SIZES.previewMoveLineOffset)}
             stroke={indicatorColor}
-            strokeWidth="4"
+            strokeWidth={SIZES.previewMoveStrokeWidth}
             strokeLinecap="round"
           />
           <line
-            x1={cell.center.x - (piece ? 15 : 8)}
-            y1={cell.center.y + (piece ? 15 : 8)}
-            x2={cell.center.x + (piece ? 15 : 8)}
-            y2={cell.center.y - (piece ? 15 : 8)}
+            x1={cell.center.x - (piece ? SIZES.previewMoveLineOffsetPiece : SIZES.previewMoveLineOffset)}
+            y1={cell.center.y + (piece ? SIZES.previewMoveLineOffsetPiece : SIZES.previewMoveLineOffset)}
+            x2={cell.center.x + (piece ? SIZES.previewMoveLineOffsetPiece : SIZES.previewMoveLineOffset)}
+            y2={cell.center.y - (piece ? SIZES.previewMoveLineOffsetPiece : SIZES.previewMoveLineOffset)}
             stroke={indicatorColor}
-            strokeWidth="4"
+            strokeWidth={SIZES.previewMoveStrokeWidth}
             strokeLinecap="round"
           />
         </g>

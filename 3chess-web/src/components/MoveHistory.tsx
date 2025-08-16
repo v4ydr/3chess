@@ -2,6 +2,7 @@ import React from 'react';
 import { Player, PieceType } from '../types/game';
 import type { Move } from '../types/game';
 import './MoveHistory.css';
+import { getPlayerColor, PIECE_SYMBOLS } from '../config/constants';
 const USE_STRING = false;
 interface MoveHistoryProps {
   moves: Move[];
@@ -12,31 +13,17 @@ interface MoveHistoryProps {
 const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentPlayer }) => {
   const getPieceSymbol = (type: PieceType): string => {
     switch (type) {
-      case PieceType.KING: return USE_STRING ? 'K' : '♚';
-      case PieceType.QUEEN: return USE_STRING ? 'Q' : '♛';
-      case PieceType.ROOK: return USE_STRING ? 'R' : '♜';
-      case PieceType.BISHOP: return USE_STRING ? 'B' : '♝';
-      case PieceType.KNIGHT: return USE_STRING ? 'N' : '♞';
-      case PieceType.PAWN: return USE_STRING ? 'P' : '♟';
+      case PieceType.KING: return USE_STRING ? 'K' : PIECE_SYMBOLS.KING;
+      case PieceType.QUEEN: return USE_STRING ? 'Q' : PIECE_SYMBOLS.QUEEN;
+      case PieceType.ROOK: return USE_STRING ? 'R' : PIECE_SYMBOLS.ROOK;
+      case PieceType.BISHOP: return USE_STRING ? 'B' : PIECE_SYMBOLS.BISHOP;
+      case PieceType.KNIGHT: return USE_STRING ? 'N' : PIECE_SYMBOLS.KNIGHT;
+      case PieceType.PAWN: return USE_STRING ? 'P' : PIECE_SYMBOLS.PAWN;
       default: return '';
     }
   };
 
-  const getPlayerColor = (player: Player): string => {
-    switch (player) {
-      case Player.RED: return '#d61539';
-      case Player.WHITE: return '#ffffff';
-      case Player.BLACK: return '#1a1a1a';
-      default: return '#000';
-    }
-  };
 
-  const formatMove = (move: Move | undefined): string => {
-    if (!move) return '';
-    const piece = getPieceSymbol(move.piece);
-    const capture = move.captured ? 'x' : '-';
-    return `${piece} ${move.from}${capture}${move.to}`;
-  };
 
   // Group moves by move number (every 3 moves is one complete turn)
   const groupedMoves: (Move | undefined)[][] = [];

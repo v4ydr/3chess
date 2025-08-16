@@ -8,7 +8,7 @@
 }
 
 .board {
-  position: relative;
+  position: absolute;
   width: 900px;
   height: 900px;
   transform: rotate(30deg); /* Rotate to align hexagon properly */

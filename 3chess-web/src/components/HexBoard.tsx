@@ -4,40 +4,31 @@ import { Cell } from '../utils/hexMath';
 import { createNodeMapping } from '../utils/nodeMapping';
 import HexSquare from './HexSquare';
 import './HexBoard.css';
-import { Player, PieceType } from '../types/game';
+import { 
+  BOARD_SIZE, 
+  BOARD_VIEWBOX, 
+  COLORS, 
+  SIZES, 
+  pieceSymbols,
+  getPlayerColor,
+  getPlayerStrokeColor 
+} from '../config/constants';
 
-// Filled/solid Unicode pieces
-const pieceSymbols: Record<PieceType, string> = {
-  [PieceType.KING]: '♚',
-  [PieceType.QUEEN]: '♛',
-  [PieceType.ROOK]: '♜',
-  [PieceType.BISHOP]: '♝',
-  [PieceType.KNIGHT]: '♞',
-  [PieceType.PAWN]: '♟',
-};
 
 const DraggedPiece: React.FC<{ piece: Piece; x: number; y: number }> = ({ piece, x, y }) => (
   <text
     x={x}
-    y={y + 18}
-    fontSize="60"
+    y={y + SIZES.pieceOffsetY}
+    fontSize={SIZES.pieceFontSize}
     fontWeight="bold"
     textAnchor="middle"
-    fill={
-      piece.player === Player.RED ? '#D61539' :
-      piece.player === Player.WHITE ? '#F0F0F0' :
-      '#0A0A0A'
-    }
-    stroke={
-      piece.player === Player.RED ? '#808080' :
-      piece.player === Player.WHITE ? '#000000' :
-      '#FFFFFF'
-    }
-    strokeWidth="1"
+    fill={getPlayerColor(piece.player)}
+    stroke={getPlayerStrokeColor(piece.player)}
+    strokeWidth={SIZES.pieceStrokeWidth}
     style={{ 
       userSelect: 'none', 
       pointerEvents: 'none',
-      filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.5))'
+      filter: SIZES.draggedPieceShadow
     }}
   >
     {pieceSymbols[piece.type]}
@@ -53,6 +44,7 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
   const nodeMapping = useMemo(() => createNodeMapping(), []);
   const [draggedNode, setDraggedNode] = useState<string | null>(null);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const [hoveredSquare, setHoveredSquare] = useState<string | null>(null);
   const isDraggingRef = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
   
@@ -96,8 +88,8 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
       // Get initial mouse position
       if (svgRef.current) {
         const rect = svgRef.current.getBoundingClientRect();
-        const initialX = ((event.clientX - rect.left) / rect.width) * 900;
-        const initialY = ((event.clientY - rect.top) / rect.height) * 900;
+        const initialX = ((event.clientX - rect.left) / rect.width) * BOARD_SIZE;
+        const initialY = ((event.clientY - rect.top) / rect.height) * BOARD_SIZE;
         
         // Set initial drag position to current mouse position
         setDragPosition({ x: initialX, y: initialY });
@@ -112,9 +104,26 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
         e.preventDefault();
         if (svgRef.current) {
           const rect = svgRef.current.getBoundingClientRect();
-          const x = ((e.clientX - rect.left) / rect.width) * 900;
-          const y = ((e.clientY - rect.top) / rect.height) * 900;
+          const x = ((e.clientX - rect.left) / rect.width) * BOARD_SIZE;
+          const y = ((e.clientY - rect.top) / rect.height) * BOARD_SIZE;
           setDragPosition({ x, y });
+          
+          // Find which square we're hovering over
+          let foundHover = false;
+          for (const [hoverNode, cell] of cells.entries()) {
+            const dist = Math.sqrt(
+              Math.pow(cell.center.x - x, 2) + 
+              Math.pow(cell.center.y - y, 2)
+            );
+            if (dist < SIZES.dragDetectionRadius) { // Within reasonable distance of center
+              setHoveredSquare(hoverNode);
+              foundHover = true;
+              break;
+            }
+          }
+          if (!foundHover) {
+            setHoveredSquare(null);
+          }
         }
       };
       
@@ -122,8 +131,8 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
         e.preventDefault();
         if (svgRef.current) {
           const rect = svgRef.current.getBoundingClientRect();
-          const x = ((e.clientX - rect.left) / rect.width) * 900;
-          const y = ((e.clientY - rect.top) / rect.height) * 900;
+          const x = ((e.clientX - rect.left) / rect.width) * BOARD_SIZE;
+          const y = ((e.clientY - rect.top) / rect.height) * BOARD_SIZE;
           
           // Find which square was dropped on
           for (const [dropNode, cell] of cells.entries()) {
@@ -131,7 +140,7 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
               Math.pow(cell.center.x - x, 2) + 
               Math.pow(cell.center.y - y, 2)
             );
-            if (dist < 30) { // Within reasonable distance of center
+            if (dist < SIZES.dragDetectionRadius) { // Within reasonable distance of center
               // Normal drag - never in debug mode
               onSquareClick(dropNode, false);
               break;
@@ -140,6 +149,7 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
         }
         
         setDraggedNode(null);
+        setHoveredSquare(null);
         isDraggingRef.current = false;
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
@@ -154,13 +164,13 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
     <div className="hex-board-container">
       <svg 
         ref={svgRef}
-        width="900" 
-        height="900" 
-        viewBox="0 0 900 900"
+        width={BOARD_SIZE} 
+        height={BOARD_SIZE} 
+        viewBox={BOARD_VIEWBOX}
         className="hex-board"
       >
         {/* Dark background */}
-        <rect width="900" height="900" fill="#191919" />
+        <rect width={BOARD_SIZE} height={BOARD_SIZE} fill={COLORS.board.background} />
         
         {/* Render all squares */}
         {Array.from(cells.entries()).map(([node, cell]) => {
@@ -184,6 +194,7 @@ const HexBoard: React.FC<HexBoardProps> = ({ state, onSquareClick }) => {
               isGrayMove={isGrayMove}
               isLastMove={isLastMoveSquare}
               selectedPiecePlayer={selectedPiece?.player}
+              isDragHovered={draggedNode !== null && hoveredSquare === node}
               onClick={(e) => handleClick(node, e)}
               onMouseDown={(e) => handleDragStart(node, e)}
             />

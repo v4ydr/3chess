@@ -473,14 +473,8 @@ export class GameEngine {
           // Moving down in middle section
           isForwardDiagonal = neighborRank === rank - 1;
         } else if (rank === 5) {
-          // At transition: can go to 4 (for ABCD/EFGH) or 9 (for IJKL → EFGH cross-board)
-          if ('IJKL'.includes(file)) {
-            // From IJKL at rank 5, can capture to rank 9 (any file in that area)
-            isForwardDiagonal = neighborRank === 9;
-          } else {
-            // From ABCD/EFGH at rank 5, can capture to rank 4
-            isForwardDiagonal = neighborRank === 4;
-          }
+          // At transition: can capture to both rank 4 AND rank 9 (all three forward diagonals)
+          isForwardDiagonal = neighborRank === 4 || neighborRank === 9;
         } else if (rank >= 9) {
           // In top section: moving up
           isForwardDiagonal = neighborRank === rank + 1;
